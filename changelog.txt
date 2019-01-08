@@ -1,6 +1,3 @@
-A more advanced version of the test_wrapper project in the "../Development/Testing/" directory.
-
-
 Changelog
 =========
 25.12.2018 - 1.03
