@@ -1,0 +1,53 @@
+Testlog (On a Jetson TX2 + ARMv8 Processor rev3 (v8l) aarch64 6-core 2.035 GHz)
+(Average of small scale tests --> n = 10)
+===========
+06.12.18 - 1.02b - "Performance-logging addition, no major changes"
+	N/A
+
+03.12.18 - 1.02 - "CPU transition for RNG (see changelog)"
+Average time for default bitmap
+	C_Init 	~5.66 ms
+	C_Launch~2.14 ms
+	Init 	~5.25 ms
+	Launch 	~0.42 ms
+Average time for 1920x1080 bitmap
+	C_Init 	~162.53 ms
+	C_Launch~4.56 ms
+	Init 	~162.66 ms
+	Launch 	~4.55 ms
+
+28.11.18 - 1.01b - "Fixed Kernel Init issue (see changelog)"
+Average time for default bitmap
+	C_Init 	~1.11 ms
+	C_Launch~7.43 ms
+	Init 	~0.69 ms
+	Launch 	~3.05 ms
+Average time for 1920x1080 bitmap
+	C_Init 	~25.23 ms
+	C_Launch~47.09 ms
+	Init 	~14.89 ms
+	Launch 	~66.24 ms
+
+27.11.18 - 1.01 - "Kernel Init issue spotted"
+Average time for default bitmap
+	C_Init 	~56.05 ms
+	C_Launch~1.30 ms
+	Init 	~9.52 ms
+	Launch 	~0.51 ms
+Average time for 1920x1080 bitmap
+	C_Init 	~13639.32 ms
+	C_Launch~11.64 ms
+	Init 	~13576.16 ms
+	Launch 	~11.50 ms
+
+21.11.18 - 1.00 - "Baseline program, not much testing occurred"
+Average time for default bitmap
+	C_Init 	~N/A
+	C_Launch~N/A
+	Init 	~N/A
+	Launch 	~0.8 ms
+Average time for 1920x1080 bitmap
+	C_Init 	~N/A
+	C_Launch~N/A
+	Init 	~N/A
+	Launch 	~13.6 ms

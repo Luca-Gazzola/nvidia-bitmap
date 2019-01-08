@@ -1,0 +1,66 @@
+A more advanced version of the test_wrapper project in the "../Development/Testing/" directory.
+
+
+Changelog
+=========
+25.12.2018 - 1.03
+Merry Christmas!
+I've successfully implemented all of Random Generation, optimized portions of my code,
+and refactored some functions so that they are easier to read. I've also improved
+testlogging so that it's now using a .csv format for easier and more organizing parsing
+of results in another program like Excel (or Libre Office for me). Both Static and Random
+generation having performant and non-performant tracking variants that can be selectively
+used. Should be bug free, I hope. I'll continue with new generation types post New Year.
+
+13.12.2018 - 1.02c
+*This version does not have its own standalone version* 
+Processor_Types to differentiate which hardware to use (CPU/GPU/Both) as well as a more 
+in depth performance class have been implemented for easier testing and logging. Added 
+more specialty logging to the test_wrapper.cpp so that I can now output testing data to 
+a .csv file that can be read in excel which makes it easier to look through the massive 
+amounts of data when I choose to increase the amount of tests ran (for more accurate numbers). 
+Currently working on the the rest of the RandomGeneration implementation, GPU and CPU are 
+already complete but the CPUtoGPU implementation is proving more difficult than expected. 
+v1.03 will be pushed once I have finished this last implementation, and added non 
+performance-tracking variants to the project.
+
+06.12.2018 - 1.02b
+I have added performance logging to the Bitmap class. It should now be easier to test the
+performance of the class, as well as routing that information somewhere (like a document
+instead of just the terminal). The constructors have been modified to have a default bool
+in each that allows for performance use (shouldn't affect constructors already used), as
+well as changing all unsigned int types to int due to my use of the explicit keyword for
+construction. Added some slight QoL stuff for now, which might be removed later like the
+Macros for my Bitmap enums (I don't know the precedent for this, and whether or not wise
+to do it so I'll be careful about using the macros). I've expanded the tests so that it
+will log the performance of the Bitmap class as well.
+
+03.12.2018 - 1.02
+After coming across a paper online titled "A Comparison of CPUs, GPUs, FPGAs, and Massively
+Parallel Processor Arrays for Random Number Generation" by David B. Thomas, Lee Howes, and 
+Wayne Luk. It states that the CPU is still incredibly powerful, if not more than the GPU when
+it comes to an Random Number Generator. I created a CPU variant of the RNG to compete against
+the GPU. I utilize the CUDA Texture feature since I'm essentially creating a bitmap in the 
+CPU, then copying the information from the CPU to the GPU, processing it there, then returning
+the processed bitmap back into the class.
+
+28.11.2018 - 1.01b
+Discovered that the issue is not my optimization of the launched kernels by the initialization
+of my random number generator. I've changed it so that my offset is now 0, and uniquely seeds
+the kernel by the ID of the thread instead (basically moved the offset to the seed). Now it
+works but the launched kernels now run slower, but the initialization is a lot faster as well.
+Shared memory is not possible in this state of the project as it's not very useful right now.
+
+27.11.2018 - 1.01
+Finished implementing 4:1 unrolling per thread. The width of the launched blocks/threads is one
+fourth of the original dimensions of the bitmap image. Hopefully this unrolling optimized the
+creation of the pixels. Planning on adding a shared memory cache per block to maybe increase
+efficiency? If anything it'll help with learning how to use shared memory.
+
+21.11.2018 - 1.00
+I recently moved all of the files in the test_wrapper project to this new 
+"../Development/Projects/Bitmap/". I personally wanted to improve the Bitmap project since it's 
+actually fun to work with and involves a lot of problem solving in order to do what I want. This 
+is basically a larger project made just for fun. If I do manage to get it working without any 
+issues, it's a good way to generate some Bitmaps I guess. This version also has an actual file 
+structure!
