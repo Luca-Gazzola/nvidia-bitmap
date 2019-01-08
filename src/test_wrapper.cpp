@@ -188,7 +188,7 @@ int main()
     /**
      * Test generations
      */
-    bool run_prolonged = true;
+    bool run_prolonged = false;
     bool have_perf = true;
     auto bitmap_gen_type = BitmapTypeRandom;
     auto bitmap_hardware = BitmapProcessorCPUtoGPU;

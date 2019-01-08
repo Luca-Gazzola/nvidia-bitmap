@@ -264,7 +264,7 @@ endif
 # Object/Source
 OBJECT 			:= test_wrapper
 OBJECT_EXT 		:= .cpp
-TOPDIR			:= $(HOME)/Development/Projects/Bitmap/
+TOPDIR			:= $(HOME)/Development/Projects/nvidia-bitmap/
 SRCDIR			:= $(TOPDIR)src/
 OBJDIR			:= $(TOPDIR)temp/
 BINDIR			:= $(TOPDIR)bin/
