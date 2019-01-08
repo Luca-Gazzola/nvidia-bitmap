@@ -290,6 +290,11 @@ void Bitmap::GenerateDivide()
 
 }
 
+void Bitmap::GenerateMatrixMult()
+{
+
+}
+
 
 /**
  * File write

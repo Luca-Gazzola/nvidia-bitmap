@@ -68,6 +68,7 @@ private:
     void GenerateSubtract();
     void GenerateMultiply();
     void GenerateDivide();
+    void GenerateMatrixMult();
 
     // File write
     void WriteData(std::ofstream& file);
