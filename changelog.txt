@@ -1,5 +1,16 @@
 Changelog
 =========
+17.01.2019 - 1.04
+New year, new version!
+After some time off, and of course developing the new version, I have added a new
+Matrix Multiplication function out of nowhere! Truth be told it was fairly relevant 
+that I added the code to ensure that I have at least something a bit more advanced-ish
+that I can show to some people in my lab. I still have to add a non-performant tracking
+variant for practicality sake. It's important to note that I'll be continuing to work on 
+this project probably up until the 5th of Feburaury since I will basically be presenting 
+all of my CUDA C and GPU knowledge, which is basically this project. We'll see if I
+decide to keep working on this project for the giggles.
+
 25.12.2018 - 1.03
 Merry Christmas!
 I've successfully implemented all of Random Generation, optimized portions of my code,
