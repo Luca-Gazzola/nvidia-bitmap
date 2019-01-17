@@ -58,27 +58,23 @@ namespace Kernel
                 delete[] texture;
                 break;
             }
+
+            case default:
+            {
+                throw BitmapException("[STATIC_GENERATION] Specified Processor_Type doesn't exist")
+            }
         }
 
         if (map == nullptr)
             throw BitmapException("[GENERATION ERROR] Static Map generation has failed.");
 
-        // Allocate new 2D dynamic array
-        RGBQUAD** color = AllocateDynamic2D<RGBQUAD>(width, height);
-
-        // Unflattening array to a 2D array
-        for (int row = 0; row < height; ++row)
-            for (int col = 0; col < width; ++col)
-            {
-                color[col][row].rgbBlue     = map[row * width + col];
-                color[col][row].rgbGreen    = map[row * width + col];
-                color[col][row].rgbRed      = map[row * width + col];
-            }
+        // Convert back to RGBQUAD (from uchar4)
+        RGBQUAD** colorMap = UnflattenCopyToDynamic2D(map, width, height);
 
         // Deallocate map
         free(map); // C-style call due to C-style allocation
 
-        return color;
+        return colorMap;
     }
 
     RGBQUAD** StaticGeneration(Processor_Type hardware, int width, int height,
@@ -131,6 +127,11 @@ namespace Kernel
                 delete[] texture;
                 break;
             }
+
+            case default:
+            {
+                throw BitmapException("[STATIC_GENERATION] Specified Processor_Type doesn't exist")
+            }
         }
 
         if (map == nullptr)
@@ -139,17 +140,8 @@ namespace Kernel
         // Time initialization for the RGB map build
         auto bitmap_map_build_start = Time::now();
 
-        // Allocate new 2D dynamic array
-        RGBQUAD** color = AllocateDynamic2D<RGBQUAD>(width, height);
-
-        // Unflattening array to a 2D array
-        for (int row = 0; row < height; ++row)
-            for (int col = 0; col < width; ++col)
-            {
-                color[col][row].rgbBlue  = map[row * width + col];
-                color[col][row].rgbGreen = map[row * width + col];
-                color[col][row].rgbRed   = map[row * width + col];
-            }
+        // Convert back to RGBQUAD (from uchar4)
+        RGBQUAD** colorMap = UnflattenCopyToDynamic2D(map, width, height);
 
         // Finish timing
         auto bitmap_map_build_finish = Time::now();
@@ -159,7 +151,7 @@ namespace Kernel
         // Deallocate map
         free(map); // C-style call due to C-style allocation
 
-        return color;
+        return colorMap;
     }
 
     // Wraps the random generation kernels from Kernel.cu so that
@@ -194,21 +186,15 @@ namespace Kernel
                 delete[] texture;
                 break;
             }
+
+            case default:
+            {
+                throw BitmapException("[RANDOM_GENERATION] Specified Processor_Type doesn't exist")
+            }
         }
 
-        // Allocate RGBQUAD
-        RGBQUAD** colorMap = AllocateDynamic2D<RGBQUAD>(width, height);
-        RGBQUAD* colorReader = nullptr;
-
-        // Unflattening array to a 2D array
-        for (int row = 0; row < height; ++row)
-            for (int col = 0; col < width; ++col)
-            {
-                colorReader = colorMap[col] + row;
-                colorReader->rgbBlue  = maps[row * width + col].x;
-                colorReader->rgbGreen = maps[row * width + col].y;
-                colorReader->rgbRed   = maps[row * width + col].z;
-            }
+        // Convert back to RGBQUAD (from uchar4)
+        RGBQUAD** colorMap = UnflattenCopyToDynamic2D(maps, width, height);
 
         // Deallocate C-style malloc
         free(maps);
@@ -267,26 +253,92 @@ namespace Kernel
                 delete[] texture;
                 break;
             }
+
+            case default:
+            {
+                throw BitmapException("[RANDOM_GENERATION] Specified Processor_Type doesn't exist")
+            }
         }
 
-        // Allocate RGBQUAD
-        RGBQUAD** colorMap = AllocateDynamic2D<RGBQUAD>(width, height);
-        RGBQUAD* colorReader = nullptr;
-
-        // Unflattening array to a 2D array
-        for (int row = 0; row < height; ++row)
-            for (int col = 0; col < width; ++col)
-            {
-                colorReader = colorMap[col] + row;
-                colorReader->rgbBlue  = maps[row * width + col].x;
-                colorReader->rgbGreen = maps[row * width + col].y;
-                colorReader->rgbRed   = maps[row * width + col].z;
-            }
+        // Convert back to RGBQUAD (from uchar4)
+        RGBQUAD** colorMap = UnflattenCopyToDynamic2D(maps, width, height);
 
         // Deallocate C-style malloc
         free(maps);
 
         return colorMap;
+    }
+
+    // Wraps the matrix multiplication kernels from Kernel.cu so
+    // that it remains C++ compatible without having to use C-style
+    // calls/functions outside of this file
+    RGBQUAD** MatrixMult()
+    {
+
+    }
+
+    RGBQUAD** MatrixMult(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                         const RGBQUAD* const* other, int otherWidth, int otherHeight, double performance[])
+    {
+        // Timer --> easier to type
+        typedef std::chrono::high_resolution_clock Time;
+        typedef std::chrono::duration<double> double_seconds;
+
+        switch(hardware)
+        {
+            case Processor_Type::GPU :
+            {
+                // Create two flat copies of each map to prep for GPU computation
+                uchar4* map = FlattenCopyDynamic2D(colorMap, width, height);
+                uchar4* otherMap = FlattenCopyDynamic2D(other, otherWidth, otherHeight);
+
+                // Run GPU Matrix Mult
+                uchar4* result = LaunchMatrixMult(map, width, height, otherMap, otherWidth, otherHeight, performance);
+
+                if (!result)
+                    throw BitmapException("[MATRIX_MULT] GPU computation failed");
+
+                // Deallocate flattened maps post-GPU use
+                delete[] map;
+                delete[] otherMap;
+
+                // Convert back to RGBQUAD (from uchar4)
+                RGBQUAD** newMap = UnflattenCopyToDynamic2D(result, height, otherWidth);
+
+                // Deallocate resultant matrix (C-style)
+                free(result);
+
+                return newMap;
+            }
+
+            case Processor_Type::CPU :
+            {
+                RGBQUAD** map = nullptr;
+
+                // Time measurement for CPU RNG initialization
+                auto init_CPU_time_start = Time::now();
+
+                // Run CPU generation with 0/255 values and save to a flattened array
+                map = CPUMatrixMult(colorMap, width, height, other, otherWidth, otherHeight);
+
+                // Finish timing
+                auto init_CPU_time_finish = Time::now();
+                double_seconds seconds = init_CPU_time_finish - init_CPU_time_start;
+                performance[3] = seconds.count() * 1000; // CPUMapInit
+
+                return map;
+            }
+
+            case Processor_Type::CPUtoGPU :
+            {
+                throw BitmapException("[MATRIX_MULT] NOT IMPLEMENTED");
+            }
+
+            case default:
+            {
+                throw BitmapException("[MATRIX_MULT] Specified Processor_Type doesn't exist")
+            }
+        }
     }
 }
 
@@ -319,6 +371,63 @@ namespace
             delete[] map[i];
         }
         delete[] map;
+    }
+
+    uchar4* FlattenCopyDynamic2D(const RGBQUAD* const* map, int width, int height)
+    {
+        uchar4* newMap = new uchar4[width * height];
+
+        for (int j = 0; j < height; ++j)
+            for (int i = 0; i < width; ++i)
+            {
+                uchar4& element = newMap[i + j * width];
+                element.x = map[i][j].rgbRed;
+                element.y = map[i][j].rgbGreen;
+                element.z = map[i][j].rgbBlue;
+                element.w = map[i][j].rgbReserved;
+            }
+
+        return newMap;
+    }
+
+    RGBQUAD** UnflattenCopyToDynamic2D(unsigned char* map, int width, int height)
+    {
+        // Allocate RGBQUAD
+        RGBQUAD** colorMap = AllocateDynamic2D<RGBQUAD>(width, height);
+        RGBQUAD* colorReader = nullptr;
+
+        // Unflattening array to a 2D array
+        for (int j = 0; j < height; ++j)
+            for (int i = 0; i < width; ++i)
+            {
+                colorReader = colorMap[i] + j;
+                colorReader->rgbBlue     = map[i + j * width];
+                colorReader->rgbGreen    = map[i + j * width];
+                colorReader->rgbRed      = map[i + j * width];
+                colorReader->rgbReserved = static_cast<unsigned char>(0);
+            }
+
+        return colorMap;
+    }
+
+    RGBQUAD** UnflattenCopyToDynamic2D(uchar4* map, int width, int height)
+    {
+        // Allocate RGBQUAD
+        RGBQUAD** colorMap = AllocateDynamic2D<RGBQUAD>(width, height);
+        RGBQUAD* colorReader = nullptr;
+
+        // Unflattening array to a 2D array
+        for (int j = 0; j < height; ++j)
+            for (int i = 0; i < width; ++i)
+            {
+                colorReader = colorMap[i] + j;
+                colorReader->rgbBlue     = map[i + j * width].x;
+                colorReader->rgbGreen    = map[i + j * width].y;
+                colorReader->rgbRed      = map[i + j * width].z;
+                colorReader->rgbReserved = map[i + j * width].w;
+            }
+
+        return colorMap;
     }
 
     // Generates a static map with each element being a uchar
@@ -378,7 +487,8 @@ namespace
             for (int i = 0; i < width; i++)
             {
                 unsigned char element = distribution(generator);
-                texture[i + j * width] = (element < 127) ? (unsigned char)0 : (unsigned char)255;
+                texture[i + j * width] = (element < 127) ?
+                                         static_cast<unsigned char>(0) : static_cast<unsigned char>(255);
             }
 
         return texture;
@@ -403,5 +513,48 @@ namespace
             }
 
         return texture;
+    }
+
+    RGBQUAD** CPUMatrixMult(const RGBQUAD* const* colorMap, int width, int height,
+                            const RGBQUAD* const* other, int otherWidth, int otherHeight)
+    {
+        // REMINDER: Matrices are defined as "Height x Width" not "Width x Height",
+        // hence the slight confusion and bugs that have occurred here
+
+        // Matrix product restriction
+        if (height != otherWidth)
+            throw BitmapException("[MATRIX_MULT] Dimensions (height and other's width) are not compatible");
+
+        RGBQUAD** result = AllocateDynamic2D<RGBQUAD>(height, otherWidth);
+
+        double heightDownscale = 1.0 / static_cast<double>(height);
+        double charDownscale = 1.0 / 255.0;
+
+        // Iterate through resultant
+        for (int j = 0; j < height; j++)
+            for (int i = 0; i < otherWidth; i++)
+            {
+                double sumR = 0.0;
+                double sumB = 0.0;
+                double sumG = 0.0;
+
+                // Iterate through the two input matrices
+                for (int k = 0; k < width; k++)
+                {
+                    sumR += static_cast<double>(colorMap[k][j].rgbRed) * static_cast<double>(other[i][k].rgbRed) *
+                            heightDownscale * charDownscale;
+                    sumG += static_cast<double>(colorMap[k][j].rgbGreen) * static_cast<double>(other[i][k].rgbGreen) *
+                            heightDownscale * charDownscale;
+                    sumB += static_cast<double>(colorMap[k][j].rgbBlue) * static_cast<double>(other[i][k].rgbBlue) *
+                            heightDownscale * charDownscale;
+                }
+
+                result[i][j].rgbRed      = static_cast<unsigned char>(sumR);
+                result[i][j].rgbGreen    = static_cast<unsigned char>(sumG);
+                result[i][j].rgbBlue     = static_cast<unsigned char>(sumB);
+                result[i][j].rgbReserved = static_cast<unsigned char>(0);
+            }
+
+        return result;
     }
 }

@@ -89,14 +89,14 @@ Bitmap::Bitmap(int width, int height, bool track_performance)
 
 // Copy Constructor
 Bitmap::Bitmap(const Bitmap& other)
+    : m_color(nullptr), m_track_performance(other.m_track_performance),
+      m_bmpHead(other.m_bmpHead), m_bmpInfo(other.m_bmpInfo)
 {
-    // Setup CUDA for class
-    if (!s_cuda_setup)
-    {
-        Kernel::CudaSetup();
-        s_cuda_setup = true;
-    }
+     SetPerformanceInformation();
 
+    // No CUDA setup necessary since it is copy
+    // constructing from another constructed Bitmap
+    m_color = CopyColorMap(other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biWidth);
 }
 
 
@@ -120,6 +120,9 @@ const std::string Bitmap::MakeBitmap(std::string fileName)
     // Checks if m_color is a nullptr
     if (!m_color)
         throw BitmapException("[MAKE_BITMAP] No color map to use");
+
+    // Reset performance
+    SetPerformanceInformation();
 
     // Output color map to file output (.bmp file)
     const std::string path("./bitmaps/");
@@ -148,20 +151,20 @@ const std::string Bitmap::MakeBitmap(std::string fileName)
 
     return filePath;
 }
+
 // Generates Bitmap with a specified generation
 // Returns the filepath of the generated Bitmap
 const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName,
                                      Processor_Type hardware)
 {
+    // Reset performance
+    SetPerformanceInformation();
+
     // Generates map depending on the Bitmap_Type
     switch (gen)
     {
         case Bitmap_Type::Static    : GenerateStatic(hardware);     break;
         case Bitmap_Type::Random    : GenerateRandom(hardware);     break;
-        case Bitmap_Type::Add       : GenerateAdd();                break;
-        case Bitmap_Type::Subtract  : GenerateSubtract();           break;
-        case Bitmap_Type::Multiply  : GenerateMultiply();           break;
-        case Bitmap_Type::Divide    : GenerateDivide();             break;
         default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Type");
     }
 
@@ -183,7 +186,47 @@ const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName,
 
     // Clean-up
     file.close();
-    DeleteColorMap();
+
+    return filePath;
+}
+
+// Takes another bitmap and modifies it with
+// this bitmap in various ways
+// Returns the filepath of the generated Bitmap
+const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName, const Bitmap& other,
+                                     Processor_Type hardware)
+{
+    // Reset performance
+    SetPerformanceInformation();
+
+    switch (gen)
+    {
+        case Bitmap_Type::Add       : GenerateAdd();                        break;
+        case Bitmap_Type::Subtract  : GenerateSubtract();                   break;
+        case Bitmap_Type::Multiply  : GenerateMultiply();                   break;
+        case Bitmap_Type::Divide    : GenerateDivide();                     break;
+        case Bitmap_Type::MatrixMult: GenerateMatrixMult(hardware, other);  break;
+        default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Type");
+    }
+
+    // Output color map to file output (.bmp file)
+    const std::string path("./bitmaps/");
+    const std::string filePath(path + fileName + ".bmp");
+    std::ofstream file(filePath, std::ofstream::out | std::ofstream::binary);
+    if (file.fail())
+    {
+        mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+        file.open(filePath, std::ofstream::out | std::ofstream::binary);
+    }
+
+    // Write to opened file
+    if (!m_track_performance)
+        WriteData(file);
+    else
+        WriteData(file, m_performance.performanceArray);
+
+    // Clean-up
+    file.close();
 
     return filePath;
 }
@@ -201,7 +244,8 @@ const double& Bitmap::Performance(Bitmap_Performance::GPU timeType) noexcept
         case Bitmap_Performance::GPU::KernelInit      : return m_performance.gpuKernelInit;
         case Bitmap_Performance::GPU::KernelLaunch    : return m_performance.gpuKernelLaunch;
         case Bitmap_Performance::GPU::MapCopy         : return m_performance.gpuMapCopy;
-        default: throw BitmapException("[PERFORMANCE] Invalid Bitmap_Performance::GPU type");
+        default:
+            throw BitmapException("[PERFORMANCE] Invalid Bitmap_Performance::GPU type: " + static_cast<int>(timeType));
     }
 }
 
@@ -211,7 +255,8 @@ const double& Bitmap::Performance(Bitmap_Performance::CPU timeType) noexcept
     {
         case Bitmap_Performance::CPU::MapInit         : return m_performance.cpuMapInit;
         case Bitmap_Performance::CPU::TextureInit     : return m_performance.cpuTextureInit;
-        default: throw BitmapException("[PERFORMANCE] Invalid Bitmap_Performance::CPU type");
+        default:
+            throw BitmapException("[PERFORMANCE] Invalid Bitmap_Performance::CPU type: " + static_cast<int>(timeType));
     }
 }
 
@@ -221,7 +266,8 @@ const double& Bitmap::Performance(Bitmap_Performance::Bitmap timeType) noexcept
     {
         case Bitmap_Performance::Bitmap::MapBuild     : return m_performance.bitmapMapBuild;
         case Bitmap_Performance::Bitmap::FileBuild    : return m_performance.bitmapFileBuild;
-        default: throw BitmapException("[PERFORMANCE] Invalid Bitmap_Performance::Bitmap type");
+        default:
+            throw BitmapException("[PERFORMANCE] Invalid Bitmap_Performance::Bitmap type: " + static_cast<int>(timeType));
     }
 }
 
@@ -290,9 +336,23 @@ void Bitmap::GenerateDivide()
 
 }
 
-void Bitmap::GenerateMatrixMult()
+void Bitmap::GenerateMatrixMult(Processor_Type hardware, const Bitmap& other)
 {
+    if (!m_color || !other.m_color)
+        throw BitmapException("[MATRIX_MULT] This object's bitmap or the other's bitmap is missing (nullptr)");
 
+    RGBQUAD** resultant = nullptr;
+
+    if (!m_track_performance)
+        resultant = Kernel::MatrixMult();
+    else
+        resultant = Kernel::MatrixMult(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biHeight,
+                                     m_performance.performanceArray);
+
+    DeleteColorMap();
+    SetBitmapInformation(m_bmpInfo.biHeight, other.m_bmpInfo.biWidth);
+    m_color = resultant;
 }
 
 
@@ -301,6 +361,9 @@ void Bitmap::GenerateMatrixMult()
  */
 void Bitmap::WriteData(std::ofstream& file)
 {
+    if (!m_color)
+        return;
+
     // Write to opened file
     file.write((char *)(&m_bmpHead), 14);
     file.write((char *)(&m_bmpInfo), 40);
@@ -320,6 +383,9 @@ void Bitmap::WriteData(std::ofstream& file)
 
 void Bitmap::WriteData(std::ofstream& file, double performance[])
 {
+    if (!m_color)
+        return;
+
     // Timer --> easier to type
     typedef std::chrono::high_resolution_clock Time;
     typedef std::chrono::duration<double> double_seconds;
@@ -389,26 +455,15 @@ inline void Bitmap::SetBitmapInformation(int width, int height) noexcept
 
 inline void Bitmap::SetPerformanceInformation() noexcept
 {
-    if (!m_track_performance)
-    {
-        m_performance.gpuKernelInit = 0.0;
-        m_performance.gpuKernelLaunch = 0.0;
-        m_performance.gpuMapCopy = 0.0;
-        m_performance.cpuMapInit = 0.0;
-        m_performance.cpuTextureInit = 0.0;
-        m_performance.bitmapMapBuild = 0.0;
-        m_performance.bitmapFileBuild = 0.0;
-    }
-    else
-    {
-        m_performance.gpuKernelInit = -1.0;
-        m_performance.gpuKernelLaunch = -1.0;
-        m_performance.gpuMapCopy = -1.0;
-        m_performance.cpuMapInit = -1.0;
-        m_performance.cpuTextureInit = -1.0;
-        m_performance.bitmapMapBuild = -1.0;
-        m_performance.bitmapFileBuild = -1.0;
-    }
+    const double init = (!m_track_performance) ? 0.0 : -1.0;
+
+    m_performance.gpuKernelInit     = \
+    m_performance.gpuKernelLaunch   = \
+    m_performance.gpuMapCopy        = \
+    m_performance.cpuMapInit        = \
+    m_performance.cpuTextureInit    = \
+    m_performance.bitmapMapBuild    = \
+    m_performance.bitmapFileBuild   = init;
 }
 
 RGBQUAD** Bitmap::AllocateColorMap(int width, int height)
@@ -425,7 +480,7 @@ RGBQUAD** Bitmap::AllocateColorMap(int width, int height)
     return map;
 }
 
-RGBQUAD** Bitmap::CopyColorMap(const RGBQUAD** map, int width, int height)
+RGBQUAD** Bitmap::CopyColorMap(RGBQUAD** map, int width, int height)
 {
     // Allocates a new RGBQUAD matrix
     RGBQUAD** newMap = AllocateColorMap(width, height);

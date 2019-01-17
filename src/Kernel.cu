@@ -31,10 +31,51 @@
  */
 __host__ inline static int DetermineThreads(int width, int height)
 {
-    if (height < THREAD_COUNT || width < THREAD_COUNT)
-        return (int)(sqrt(height * width) + 1);
+    if (height < THREAD_COUNT && width < THREAD_COUNT)
+        return (int)(sqrt(sqrt(height * width)) + 1);
     else
         return (int)(sqrt(THREAD_COUNT));
+}
+
+__host__ inline static void SetupKernelThreadParams(dim3* threadsPerBlock, dim3* blocks, int threadCount, int width, int height)
+{
+    threadsPerBlock->x = threadCount * .25;
+    threadsPerBlock->y = threadCount; // xy = (threadCount * .25) * threadCount
+    blocks = blocks; // stop warnings in compiler
+    int blockWidth = (width + threadsPerBlock->x - 1) / threadsPerBlock->x * .25 +
+                     1; // *.25 due to 4:1 thread unroll and +1 for ceiling
+    int blockHeight = (height + threadsPerBlock->y - 1) / threadsPerBlock->y;
+    blocks->x = blockWidth != 0 ? blockWidth : 1;
+    blocks->y = blockHeight != 0 ? blockHeight : 1;
+}
+
+__host__ static cudaTextureObject_t SetupTextureObjectArray(uchar4* rawTexture, int width, int height)
+{
+    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<uchar4>();
+    cudaArray* texArray = NULL;
+    CUDA_CALL( cudaMallocArray(&texArray, &channelDesc, width, height) );
+
+    // CUDA Allocation of CPU texture import
+    CUDA_CALL( cudaMemcpy2DToArray(texArray, 0, 0, rawTexture, width*sizeof(uchar4), width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+
+    // CUDA Kepler texture setup
+    cudaResourceDesc texResource;
+    cudaTextureDesc texDescription;
+    memset(&texResource, 0, sizeof(texResource));
+    memset(&texDescription, 0, sizeof(texDescription));
+    texResource.resType = cudaResourceTypeArray;
+    texResource.res.array.array = texArray;
+    texDescription.addressMode[0] = cudaAddressModeWrap;
+    texDescription.addressMode[1] = cudaAddressModeWrap;
+    texDescription.addressMode[2] = cudaAddressModeWrap;
+    texDescription.filterMode = cudaFilterModePoint;
+    texDescription.readMode = cudaReadModeElementType;
+
+    // CUDA Kepler texture
+    cudaTextureObject_t texObject;
+    CUDA_CALL( cudaCreateTextureObject(&texObject, &texResource, &texDescription, NULL) );
+
+    return texObject;
 }
 
 
@@ -61,13 +102,10 @@ __host__ unsigned char* LaunchStaticGeneration(int width,
     CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(unsigned char), height ) );
 
     // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
     int threadCount = DetermineThreads(width, height);
-    dim3 threadsPerBlock(threadCount * .25, threadCount); // xy = (threadCount * .25) * threadCount
-    dim3 blocks(1, 1);
-    int blockWidth = (width + threadsPerBlock.x - 1) / threadsPerBlock.x  * .25; // *.25 due to 4:1 thread unroll
-    int blockHeight  = (height + threadsPerBlock.y - 1) / threadsPerBlock.y;
-    blocks.x = blockWidth != 0 ? blockWidth : 1;
-    blocks.y = blockHeight != 0 ? blockHeight : 1;
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
 
     // cuRand Generator and Generator Allocation
     curandState* d_state;
@@ -130,13 +168,10 @@ __host__ unsigned char* LaunchStaticGenerationTexture(int width,
     CUDA_CALL( cudaCreateTextureObject(&tex, &texResource, &texDescription, NULL) );
 
     // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
     int threadCount = DetermineThreads(width, height);
-    dim3 threadsPerBlock(threadCount * .25, threadCount); // xy = (threadCount * .25) * threadCount
-    dim3 blocks(1, 1);
-    int blockWidth = (width + threadsPerBlock.x - 1) / threadsPerBlock.x  * .25; // *.25 due to 4:1 thread unroll
-    int blockHeight  = (height + threadsPerBlock.y - 1) / threadsPerBlock.y;
-    blocks.x = blockWidth != 0 ? blockWidth : 1;
-    blocks.y = blockHeight != 0 ? blockHeight : 1;
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
 
     // Kernel call
     __StaticGeneration<<<blocks, threadsPerBlock>>>(width, height, d_map, d_pitch, tex);
@@ -169,13 +204,10 @@ __host__ unsigned char* LaunchStaticGeneration(int width,
     CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(unsigned char), height ) );
 
     // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
     int threadCount = DetermineThreads(width, height);
-    dim3 threadsPerBlock(threadCount * .25, threadCount); // xy = (threadCount * .25) * threadCount
-    dim3 blocks(1, 1);
-    int blockWidth = (width + threadsPerBlock.x - 1) / threadsPerBlock.x  * .25; // *.25 due to 4:1 thread unroll
-    int blockHeight  = (height + threadsPerBlock.y - 1) / threadsPerBlock.y;
-    blocks.x = blockWidth != 0 ? blockWidth : 1;
-    blocks.y = blockHeight != 0 ? blockHeight : 1;
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
 
     // Kernel init timer start
     cudaEvent_t init_start, init_stop;
@@ -271,13 +303,10 @@ __host__ unsigned char* LaunchStaticGenerationTexture(int width,
     CUDA_CALL( cudaCreateTextureObject(&tex, &texResource, &texDescription, NULL) );
 
     // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
     int threadCount = DetermineThreads(width, height);
-    dim3 threadsPerBlock(threadCount * .25, threadCount); // xy = (threadCount * .25) * threadCount
-    dim3 blocks(1, 1);
-    int blockWidth = (width + threadsPerBlock.x - 1) / threadsPerBlock.x  * .25; // *.25 due to 4:1 thread unroll
-    int blockHeight  = (height + threadsPerBlock.y - 1) / threadsPerBlock.y;
-    blocks.x = blockWidth != 0 ? blockWidth : 1;
-    blocks.y = blockHeight != 0 ? blockHeight : 1;
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
 
     // Timer start
     cudaEvent_t kernel_start, kernel_stop;
@@ -335,13 +364,10 @@ __host__ uchar4* LaunchRandomGeneration(int width, int height)
     CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
 
     // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
     int threadCount = DetermineThreads(width, height);
-    dim3 threadsPerBlock(threadCount * .25, threadCount); // xy = (threadCount * .25) * threadCount
-    dim3 blocks(1, 1);
-    int blockWidth = (width + threadsPerBlock.x - 1) / threadsPerBlock.x  * .25; // *.25 due to 4:1 thread unroll
-    int blockHeight  = (height + threadsPerBlock.y - 1) / threadsPerBlock.y;
-    blocks.x = blockWidth != 0 ? blockWidth : 1;
-    blocks.y = blockHeight != 0 ? blockHeight : 1;
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
 
     // cuRand Generator and Generator Allocation
     curandState* d_state;
@@ -404,13 +430,10 @@ __host__ uchar4* LaunchRandomGenerationTexture(int width, int height,
     CUDA_CALL( cudaCreateTextureObject(&tex, &texResource, &texDescription, NULL) );
 
     // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
     int threadCount = DetermineThreads(width, height);
-    dim3 threadsPerBlock(threadCount * .25, threadCount); // xy = (threadCount * .25) * threadCount
-    dim3 blocks(1, 1);
-    int blockWidth = (width + threadsPerBlock.x - 1) / threadsPerBlock.x  * .25; // *.25 due to 4:1 thread unroll
-    int blockHeight  = (height + threadsPerBlock.y - 1) / threadsPerBlock.y;
-    blocks.x = blockWidth != 0 ? blockWidth : 1;
-    blocks.y = blockHeight != 0 ? blockHeight : 1;
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
 
     // Kernel call
     __RandomGeneration<<<blocks, threadsPerBlock>>>(width, height, d_map, d_pitch, tex);
@@ -442,13 +465,10 @@ __host__ uchar4* LaunchRandomGeneration(int width, int height,
     CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
 
     // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
     int threadCount = DetermineThreads(width, height);
-    dim3 threadsPerBlock(threadCount * .25, threadCount); // xy = (threadCount * .25) * threadCount
-    dim3 blocks(1, 1);
-    int blockWidth = (width + threadsPerBlock.x - 1) / threadsPerBlock.x  * .25; // *.25 due to 4:1 thread unroll
-    int blockHeight  = (height + threadsPerBlock.y - 1) / threadsPerBlock.y;
-    blocks.x = blockWidth != 0 ? blockWidth : 1;
-    blocks.y = blockHeight != 0 ? blockHeight : 1;
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
 
     // Kernel init timer start
     cudaEvent_t init_start, init_stop;
@@ -544,13 +564,10 @@ __host__ uchar4* LaunchRandomGenerationTexture(int width, int height,
     CUDA_CALL( cudaCreateTextureObject(&tex, &texResource, &texDescription, NULL) );
 
     // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
     int threadCount = DetermineThreads(width, height);
-    dim3 threadsPerBlock(threadCount * .25, threadCount); // xy = (threadCount * .25) * threadCount
-    dim3 blocks(1, 1);
-    int blockWidth = (width + threadsPerBlock.x - 1) / threadsPerBlock.x  * .25; // *.25 due to 4:1 thread unroll
-    int blockHeight  = (height + threadsPerBlock.y - 1) / threadsPerBlock.y;
-    blocks.x = blockWidth != 0 ? blockWidth : 1;
-    blocks.y = blockHeight != 0 ? blockHeight : 1;
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
 
     // Timer start
     cudaEvent_t kernel_start, kernel_stop;
@@ -592,6 +609,73 @@ __host__ uchar4* LaunchRandomGenerationTexture(int width, int height,
     return map;
 }
 
+// Performance-tracking variant of LaunchMatrixMult
+__host__ uchar4* LaunchMatrixMult(uchar4* colorMap, int width, int height,
+                                  uchar4* other, int otherWidth, int otherHeight,
+                                  double performance[])
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*otherWidth*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, height*sizeof(uchar4), otherWidth ) );
+
+    // CUDA Kepler texture
+    cudaTextureObject_t texMatrixLeft = SetupTextureObjectArray(colorMap, width, height);
+    cudaTextureObject_t texMatrixRight = SetupTextureObjectArray(other, otherWidth, otherHeight);
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(height, otherWidth);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, height, otherWidth);
+
+    // Timer start
+    cudaEvent_t kernel_start, kernel_stop;
+    float kernel_time;
+    CUDA_CALL( cudaEventCreate(&kernel_start) );
+    CUDA_CALL( cudaEventCreate(&kernel_stop) );
+    CUDA_CALL( cudaEventRecord(kernel_start, 0) );
+    // Kernel call
+    __MatrixMult<<<blocks, threadsPerBlock>>>(height, otherWidth, d_map, d_pitch,
+                                              width, texMatrixLeft, texMatrixRight);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(kernel_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(kernel_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&kernel_time, kernel_start, kernel_stop) );
+    performance[1] = kernel_time;
+
+    // Timer start
+    cudaEvent_t copy_start, copy_stop;
+    float copy_time;
+    CUDA_CALL( cudaEventCreate(&copy_start) );
+    CUDA_CALL( cudaEventCreate(&copy_stop) );
+    CUDA_CALL( cudaEventRecord(copy_start, 0) );
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, height*sizeof(uchar4), d_map, d_pitch,
+                            height*sizeof(uchar4), otherWidth, cudaMemcpyDeviceToHost) );
+
+    // Timer end
+    CUDA_CALL( cudaEventRecord(copy_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(copy_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&copy_time, copy_start, copy_stop) );
+    performance[2] = copy_time;
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaDestroyTextureObject(texMatrixLeft) );
+    CUDA_CALL( cudaDestroyTextureObject(texMatrixRight) );
+
+    // CUDA Exit
+    return map;
+}
+
 
 
 /**
@@ -614,7 +698,7 @@ __global__ static void __StaticGeneration(int width, int height,
     // Get x and y index, then set that element to either 0 or 255 depending
     // on the random number (0 --> <127 // 255 --> >127).
     // Utilizes unroll 4:1 per thread for more efficient access
-    if (row < height && col + 4 < width)
+    if (row < height && col < width)
     {
         // Generate and scale the random float produced (0-255)
         unsigned char random;
@@ -723,6 +807,56 @@ __global__ static void __RandomGeneration(int width, int height,
     }
 
     return;
+}
+
+__global__ static void __MatrixMult(int width, int height, uchar4* map, int pitch,
+                                    int colRowLength, cudaTextureObject_t texLeft,
+                                    cudaTextureObject_t texRight)
+{
+    // Find x and y coordinates
+    const int idy = blockIdx.y * blockDim.y + threadIdx.y;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int col = 4 * idx;
+
+    // Retrieve matrix position
+    uchar4* current = (uchar4*)((char*)map + idy * pitch);
+
+    // col + i and idy are the resultant matrix access
+    // Still using i, j, k for consistency of the CPU variant
+    double heightDownscale = 1.0 / (double)height;
+    double charDownscale = 1.0 / 255.0;
+
+    if (idy < height && col < width)
+    {
+        int max = (width - col < 4) ? width - col : 4;
+
+        #pragma unroll
+        for (int i = 0; i < max; ++i)
+        {
+            double sumR = 0.0;
+            double sumG = 0.0;
+            double sumB = 0.0;
+
+            // Iterate through row of left and col of right
+            for (int k = 0; k < colRowLength; ++k)
+            {
+                uchar4 texelLeft  = tex2D<uchar4>(texLeft, k, idy);
+                uchar4 texelRight = tex2D<uchar4>(texRight, col + i, k);
+
+                sumR += (double) texelLeft.x * (double) texelRight.x * heightDownscale * charDownscale;
+                sumG += (double) texelLeft.y * (double) texelRight.y * heightDownscale * charDownscale;
+                sumB += (double) texelLeft.z * (double) texelRight.z * heightDownscale * charDownscale;
+            }
+
+            uchar4* curElement = current + col + i;
+            curElement->x = (unsigned char) sumR;
+            curElement->y = (unsigned char) sumG;
+            curElement->z = (unsigned char) sumB;
+            curElement->w = (unsigned char) 0;
+        }
+
+        return;
+    }
 }
 
 /**

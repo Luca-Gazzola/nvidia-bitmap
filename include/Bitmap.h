@@ -32,6 +32,8 @@ public:
     const std::string MakeBitmap(std::string fileName);
     const std::string MakeBitmap(Bitmap_Type gen, std::string fileName,
                                  Processor_Type hardware = Processor_Type::GPU);
+    const std::string MakeBitmap(Bitmap_Type gen, std::string fileName, const Bitmap& other,
+                                 Processor_Type hardware = Processor_Type::GPU);
 
     /**
      * Public Methods
@@ -68,7 +70,7 @@ private:
     void GenerateSubtract();
     void GenerateMultiply();
     void GenerateDivide();
-    void GenerateMatrixMult();
+    void GenerateMatrixMult(Processor_Type hardware, const Bitmap& other);
 
     // File write
     void WriteData(std::ofstream& file);
@@ -82,7 +84,7 @@ private:
     inline void SetBitmapInformation(int width, int height) noexcept;
     void SetPerformanceInformation() noexcept;
     RGBQUAD** AllocateColorMap(int width, int height);
-    RGBQUAD** CopyColorMap(const RGBQUAD** map, int width, int height);
+    RGBQUAD** CopyColorMap(RGBQUAD** map, int width, int height);
     void DeleteColorMap();
 };
 

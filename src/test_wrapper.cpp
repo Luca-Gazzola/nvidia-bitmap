@@ -92,6 +92,7 @@ void test_LogPerformance(Bitmap& bitmap)
     std::cout << "CPU Texture Init:  \t" << bitmap.Performance(BitmapPerfCPUTextureInit)    << " ms" << std::endl;
     std::cout << "Bitmap Map Build:  \t" << bitmap.Performance(BitmapPerfMapBuild)          << " ms" << std::endl;
     std::cout << "Bitmap File Build: \t" << bitmap.Performance(BitmapPerfFileBuild)         << " ms" << std::endl;
+    std::cout << std::endl;
 }
 
 void test_LogPerformanceToFileHeader(std::ofstream& file, Bitmap_Type gen, Processor_Type proc)
@@ -191,10 +192,21 @@ int main()
     bool run_prolonged = false;
     bool have_perf = true;
     auto bitmap_gen_type = BitmapTypeRandom;
-    auto bitmap_hardware = BitmapProcessorCPUtoGPU;
+    auto bitmap_hardware = BitmapProcessorGPU;
     int test_iterations = 50;
     std::string location;
 
+    Bitmap first(1920, 1080, have_perf);
+    Bitmap second(1080, 1920, have_perf);
+    first.MakeBitmap(bitmap_gen_type, "first");
+    test_LogPerformance(first);
+    second.MakeBitmap(bitmap_gen_type, "second");
+    test_LogPerformance(second);
+    std::cout << "Creating Bitmap: " << first.Height() << "x" << second.Width() << std::endl;
+    location = first.MakeBitmap(BitmapTypeMatrixMult, "matrixmult", second, bitmap_hardware);
+    test_LogPerformance(first);
+    std::cout << "Saved at " << location << std::endl << std::endl;
+    /*
     Bitmap test_write(have_perf);
     std::cout << "Creating Bitmap: " << test_write.Width() << "x" << test_write.Height() << std::endl;
     location = test_write.MakeBitmap(bitmap_gen_type, "test_write", bitmap_hardware);
@@ -206,6 +218,7 @@ int main()
     location = test_write2.MakeBitmap(bitmap_gen_type, "test_write2", bitmap_hardware);
     test_LogPerformance(test_write2);
     std::cout << "Saved at " << location << std::endl << std::endl;
+    */
 
     //<editor-fold desc="Prolonged Tests">
     if (run_prolonged)

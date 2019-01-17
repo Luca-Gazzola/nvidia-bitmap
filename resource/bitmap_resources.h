@@ -63,7 +63,8 @@ enum class Bitmap_Type : int
     Add,
     Subtract,
     Multiply,
-    Divide
+    Divide,
+    MatrixMult
 };
 
 struct Bitmap_Performance
@@ -71,34 +72,34 @@ struct Bitmap_Performance
     // ** Maybe separate time depending on category (GPU, CPU, Bitmap Class) ** //
     enum class GPU : int
     {
-        KernelInit,
-        KernelLaunch,
-        MapCopy
+        KernelInit      = 0,
+        KernelLaunch    = 1,
+        MapCopy         = 2
     };
 
     enum class CPU : int
     {
-        MapInit,
-        TextureInit
+        MapInit         = 3,
+        TextureInit     = 4
     };
 
     enum class Bitmap : int
     {
-        MapBuild,
-        FileBuild
+        MapBuild        = 5,
+        FileBuild       = 6
     };
 
     // ** Don't forget to add the shit here (from the enum) ** //
     // ** Oh yeah, and the macros too, those are nice ** //
     double performanceArray[7];
 
-    double& gpuKernelInit       = performanceArray[0];
-    double& gpuKernelLaunch     = performanceArray[1];
-    double& gpuMapCopy          = performanceArray[2];
-    double& cpuMapInit          = performanceArray[3];
-    double& cpuTextureInit      = performanceArray[4];
-    double& bitmapMapBuild      = performanceArray[5];
-    double& bitmapFileBuild     = performanceArray[6];
+    double& gpuKernelInit       = performanceArray[static_cast<int>(GPU::KernelInit)];
+    double& gpuKernelLaunch     = performanceArray[static_cast<int>(GPU::KernelLaunch)];
+    double& gpuMapCopy          = performanceArray[static_cast<int>(GPU::MapCopy)];
+    double& cpuMapInit          = performanceArray[static_cast<int>(CPU::MapInit)];
+    double& cpuTextureInit      = performanceArray[static_cast<int>(CPU::TextureInit)];
+    double& bitmapMapBuild      = performanceArray[static_cast<int>(Bitmap::MapBuild)];
+    double& bitmapFileBuild     = performanceArray[static_cast<int>(Bitmap::FileBuild)];
 };
 
 /**
@@ -115,6 +116,7 @@ struct Bitmap_Performance
 #define BitmapTypeSubtract          Bitmap_Type::Subtract
 #define BitmapTypeMultiply          Bitmap_Type::Multiply
 #define BitmapTypeDivide            Bitmap_Type::Divide
+#define BitmapTypeMatrixMult        Bitmap_Type::MatrixMult
 // Bitmap Performance
 #define BitmapPerfGPUKernelInit     Bitmap_Performance::GPU::KernelInit
 #define BitmapPerfGPUKernelLaunch   Bitmap_Performance::GPU::KernelLaunch

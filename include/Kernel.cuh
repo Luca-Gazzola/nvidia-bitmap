@@ -10,8 +10,11 @@
  */
  // Private host functions
 __host__ inline static int DetermineThreads(int width, int height);
+__host__ inline static void SetupKernelThreadParams(dim3* threadsPerBlock, dim3* blocks, int threadCount, int width, int height);
+__host__ static cudaTextureObject_t SetupTextureObjectArray(uchar4* rawTexture, int width, int height);
 
 // Public callable host functions
+// Static Generation
 __host__ unsigned char* LaunchStaticGeneration(int width,
                                                int height);
 __host__ unsigned char* LaunchStaticGeneration(int width,
@@ -24,6 +27,8 @@ __host__ unsigned char* LaunchStaticGenerationTexture(int width,
                                                       int height,
                                                       unsigned char* texture,
                                                       double performance[]);
+
+// Random Generation
 __host__ uchar4* LaunchRandomGeneration(int width, int height);
 __host__ uchar4* LaunchRandomGeneration(int width, int height,
                                         double performance[]);
@@ -32,6 +37,11 @@ __host__ uchar4* LaunchRandomGenerationTexture(int width, int height,
 __host__ uchar4* LaunchRandomGenerationTexture(int width, int height,
                                                uchar4* texture,
                                                double performance[]);
+
+// Matrix Multiply
+__host__ uchar4* LaunchMatrixMult(uchar4* colorMap, int width, int height,
+                                  uchar4* other, int otherWidth, int otherHeight,
+                                  double performance[]);
 
 
 /**
@@ -52,6 +62,11 @@ __global__ static void __RandomGeneration(int width, int height,
 __global__ static void __RandomGeneration(int width, int height,
                                           uchar4* map, int pitch,
                                           cudaTextureObject_t tex);
+
+// Matrix Multiplication Kernel
+__global__ static void __MatrixMult(int width, int height, uchar4* map, int pitch,
+                                    int colRowLength, cudaTextureObject_t texLeft,
+                                    cudaTextureObject_t texRight);
 
 /**
  * Kernel initialization
