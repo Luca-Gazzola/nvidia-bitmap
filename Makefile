@@ -278,7 +278,7 @@ CUSTOM_OBJECTS 	+= $(patsubst $(SRCDIR)%.cu, $(OBJDIR)%.o, $(CU_FILES))
 
 # Additional flags
 VALGRIND 		= /usr/bin/bin/valgrind
-VALGRIND_FLAGS 	= --leak-check=full --show-leak-kinds=all
+VALGRIND_FLAGS 	= --leak-check=full --show-leak-kinds=all --track-origins=yes --main-stacksize=1280000000
 CUDAMEM 		= /usr/local/cuda-9.0/bin/cuda-memcheck
 CUDAMEM_FLAGS	= --leak-check full --show-backtrace yes
 NVCC 			+= -std=c++11 -lineinfo -rdc=true
@@ -347,14 +347,16 @@ $(BINDIR)$(OBJECT)-debug: $(OBJDIR)$(OBJECT)-debug.o $(CUSTOM_OBJECTS)
 
 # Execution commands
 run: build
+	@echo "ARGS: " ${ARGS}
 	@echo "\033[1m===Running "./$(OBJECT)"===\033[0m\n"
-	@$(EXEC) $(BINDIR)$(OBJECT)
+	@$(EXEC) $(BINDIR)$(OBJECT) ${ARGS}
 	@echo "\n\033[1m===End of "./$(OBJECT)"===\033[0m"
 
 debug: debug-build
+	@echo "ARGS: " ${ARGS}
 	@echo "\nRunning cuda-memcheck and valgrind on "./$(OBJECT)-debug
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BINDIR)$(OBJECT)-debug
-	$(CUDAMEM) $(CUDAMEM_FLAGS) $(BINDIR)$(OBJECT)-debug
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BINDIR)$(OBJECT)-debug ${ARGS}
+	$(CUDAMEM) $(CUDAMEM_FLAGS) $(BINDIR)$(OBJECT)-debug ${ARGS}
 
 # Cleaners
 clean:
