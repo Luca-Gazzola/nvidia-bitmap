@@ -66,7 +66,7 @@ private:
      // Map generators
     void GenerateStatic(Processor_Type hardware);
     void GenerateRandom(Processor_Type hardware);
-    void GenerateAdd();
+    void GenerateAdd(Processor_Type hardware, const Bitmap& other);
     void GenerateSubtract();
     void GenerateMultiply();
     void GenerateDivide();

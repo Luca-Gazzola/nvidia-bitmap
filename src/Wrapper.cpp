@@ -59,9 +59,9 @@ namespace Kernel
                 break;
             }
 
-            case default:
+            default:
             {
-                throw BitmapException("[STATIC_GENERATION] Specified Processor_Type doesn't exist")
+                throw BitmapException("[STATIC_GENERATION] Specified Processor_Type doesn't exist");
             }
         }
 
@@ -83,6 +83,9 @@ namespace Kernel
         // Timer --> easier to type
         typedef std::chrono::high_resolution_clock Time;
         typedef std::chrono::duration<double> double_seconds;
+
+        // Time initialization for the RGB map build
+        auto bitmap_map_build_start = Time::now();
 
         // Generate flattened 2D array of either 0's or 255's
         unsigned char* map = nullptr;
@@ -128,28 +131,25 @@ namespace Kernel
                 break;
             }
 
-            case default:
+            default:
             {
-                throw BitmapException("[STATIC_GENERATION] Specified Processor_Type doesn't exist")
+                throw BitmapException("[STATIC_GENERATION] Specified Processor_Type doesn't exist");
             }
         }
 
         if (map == nullptr)
             throw BitmapException("[GENERATION ERROR] Static Map generation has failed.");
 
-        // Time initialization for the RGB map build
-        auto bitmap_map_build_start = Time::now();
-
         // Convert back to RGBQUAD (from uchar4)
         RGBQUAD** colorMap = UnflattenCopyToDynamic2D(map, width, height);
+
+        // Deallocate map
+        free(map); // C-style call due to C-style allocation
 
         // Finish timing
         auto bitmap_map_build_finish = Time::now();
         double_seconds seconds = bitmap_map_build_finish - bitmap_map_build_start;
         performance[5] = seconds.count() * 1000; // BitmapMapBuild
-
-        // Deallocate map
-        free(map); // C-style call due to C-style allocation
 
         return colorMap;
     }
@@ -187,9 +187,9 @@ namespace Kernel
                 break;
             }
 
-            case default:
+            default:
             {
-                throw BitmapException("[RANDOM_GENERATION] Specified Processor_Type doesn't exist")
+                throw BitmapException("[RANDOM_GENERATION] Specified Processor_Type doesn't exist");
             }
         }
 
@@ -207,6 +207,9 @@ namespace Kernel
         // Timer --> easier to type
         typedef std::chrono::high_resolution_clock Time;
         typedef std::chrono::duration<double> double_seconds;
+
+        // Time initialization for the RGB map build
+        auto bitmap_map_build_start = Time::now();
 
         // Allocate new map array to contain the 3 color channels
         uchar4* maps = nullptr;
@@ -254,9 +257,9 @@ namespace Kernel
                 break;
             }
 
-            case default:
+            default:
             {
-                throw BitmapException("[RANDOM_GENERATION] Specified Processor_Type doesn't exist")
+                throw BitmapException("[RANDOM_GENERATION] Specified Processor_Type doesn't exist");
             }
         }
 
@@ -266,14 +269,155 @@ namespace Kernel
         // Deallocate C-style malloc
         free(maps);
 
+        // Finish timing
+        auto bitmap_map_build_finish = Time::now();
+        double_seconds seconds = bitmap_map_build_finish - bitmap_map_build_start;
+        performance[5] = seconds.count() * 1000; // BitmapMapBuild
+
         return colorMap;
+    }
+
+    RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       const RGBQUAD* const* other, int otherWidth, int otherHeight)
+    {
+        return nullptr;
+    }
+
+    RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       const RGBQUAD* const* other, int otherWidth, int otherHeight, double performance[])
+    {
+        // Timer --> easier to type
+        typedef std::chrono::high_resolution_clock Time;
+        typedef std::chrono::duration<double> double_seconds;
+
+        // Time initialization for the RGB map build
+        auto bitmap_map_build_start = Time::now();
+
+        // Holds newly constructed RGB map
+        RGBQUAD** map = nullptr;
+
+        if (width != otherWidth || height != otherHeight)
+            throw BitmapException("[ADDITION] Bitmaps are not the same dimensions");
+
+        switch(hardware)
+        {
+            case Processor_Type::GPU :
+            {
+                // Create two flat copies of each map to prep for GPU computation
+                uchar4* thisMap = FlattenCopyDynamic2D(colorMap, width, height);
+                uchar4* otherMap = FlattenCopyDynamic2D(other, otherWidth, otherHeight);
+
+                // Run GPU Matrix Mult
+                uchar4* result = LaunchAddition(thisMap, width, height,
+                                                otherMap, otherWidth, otherHeight, performance);
+
+                if (!result)
+                    throw BitmapException("[MATRIX_MULT] GPU computation failed");
+
+                // Deallocate flattened maps post-GPU use
+                delete[] thisMap;
+                delete[] otherMap;
+
+                // Convert back to RGBQUAD (from uchar4)
+                map = UnflattenCopyToDynamic2D(result, width, height);
+
+                // Deallocate resultant matrix (C-style)
+                free(result);
+
+                break;
+            }
+
+            case Processor_Type::CPU :
+            {
+                // Time measurement for CPU RNG initialization
+                auto init_CPU_time_start = Time::now();
+
+                // Run CPU generation with 0/255 values and save to a flattened array
+                map = CPUAddition(colorMap, width, height, other, otherWidth, otherHeight);
+
+                // Finish timing
+                auto init_CPU_time_finish = Time::now();
+                double_seconds seconds = init_CPU_time_finish - init_CPU_time_start;
+                performance[3] = seconds.count() * 1000; // CPUMapInit
+
+                break;
+            }
+
+            case Processor_Type::CPUtoGPU :
+            {
+                throw BitmapException("[MATRIX_MULT] NOT IMPLEMENTED");
+            }
+
+            default:
+            {
+                throw BitmapException("[MATRIX_MULT] Specified Processor_Type doesn't exist");
+            }
+        }
+
+        // Finish timing
+        auto bitmap_map_build_finish = Time::now();
+        double_seconds seconds = bitmap_map_build_finish - bitmap_map_build_start;
+        performance[5] = seconds.count() * 1000; // BitmapMapBuild
+
+        return map;
     }
 
     // Wraps the matrix multiplication kernels from Kernel.cu so
     // that it remains C++ compatible without having to use C-style
     // calls/functions outside of this file
-    RGBQUAD** MatrixMult()
+    RGBQUAD** MatrixMult(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                         const RGBQUAD* const* other, int otherWidth, int otherHeight)
     {
+        // Holds newly constructed RGB map
+        RGBQUAD** map = nullptr;
+
+        switch(hardware)
+        {
+            case Processor_Type::GPU :
+            {
+                // Create two flat copies of each map to prep for GPU computation
+                uchar4* thisMap = FlattenCopyDynamic2D(colorMap, width, height);
+                uchar4* otherMap = FlattenCopyDynamic2D(other, otherWidth, otherHeight);
+
+                // Run GPU Matrix Mult
+                uchar4* result = LaunchMatrixMult(thisMap, width, height,
+                                                  otherMap, otherWidth, otherHeight);
+
+                if (!result)
+                    throw BitmapException("[MATRIX_MULT] GPU computation failed");
+
+                // Deallocate flattened maps post-GPU use
+                delete[] thisMap;
+                delete[] otherMap;
+
+                // Convert back to RGBQUAD (from uchar4)
+                map = UnflattenCopyToDynamic2D(result, height, otherWidth);
+
+                // Deallocate resultant matrix (C-style)
+                free(result);
+
+                break;
+            }
+
+            case Processor_Type::CPU :
+            {
+                // Run CPU generation with 0/255 values and save to a flattened array
+                map = CPUMatrixMult(colorMap, width, height, other, otherWidth, otherHeight);
+                break;
+            }
+
+            case Processor_Type::CPUtoGPU :
+            {
+                throw BitmapException("[MATRIX_MULT] NOT IMPLEMENTED");
+            }
+
+            default:
+            {
+                throw BitmapException("[MATRIX_MULT] Specified Processor_Type doesn't exist");
+            }
+        }
+
+        return map;
 
     }
 
@@ -284,37 +428,42 @@ namespace Kernel
         typedef std::chrono::high_resolution_clock Time;
         typedef std::chrono::duration<double> double_seconds;
 
+        // Time initialization for the RGB map build
+        auto bitmap_map_build_start = Time::now();
+
+        // Holds newly constructed RGB map
+        RGBQUAD** map = nullptr;
+
         switch(hardware)
         {
             case Processor_Type::GPU :
             {
                 // Create two flat copies of each map to prep for GPU computation
-                uchar4* map = FlattenCopyDynamic2D(colorMap, width, height);
+                uchar4* thisMap = FlattenCopyDynamic2D(colorMap, width, height);
                 uchar4* otherMap = FlattenCopyDynamic2D(other, otherWidth, otherHeight);
 
                 // Run GPU Matrix Mult
-                uchar4* result = LaunchMatrixMult(map, width, height, otherMap, otherWidth, otherHeight, performance);
+                uchar4* result = LaunchMatrixMult(thisMap, width, height,
+                                                  otherMap, otherWidth, otherHeight, performance);
 
                 if (!result)
                     throw BitmapException("[MATRIX_MULT] GPU computation failed");
 
                 // Deallocate flattened maps post-GPU use
-                delete[] map;
+                delete[] thisMap;
                 delete[] otherMap;
 
                 // Convert back to RGBQUAD (from uchar4)
-                RGBQUAD** newMap = UnflattenCopyToDynamic2D(result, height, otherWidth);
+                map = UnflattenCopyToDynamic2D(result, height, otherWidth);
 
                 // Deallocate resultant matrix (C-style)
                 free(result);
 
-                return newMap;
+                break;
             }
 
             case Processor_Type::CPU :
             {
-                RGBQUAD** map = nullptr;
-
                 // Time measurement for CPU RNG initialization
                 auto init_CPU_time_start = Time::now();
 
@@ -326,7 +475,7 @@ namespace Kernel
                 double_seconds seconds = init_CPU_time_finish - init_CPU_time_start;
                 performance[3] = seconds.count() * 1000; // CPUMapInit
 
-                return map;
+                break;
             }
 
             case Processor_Type::CPUtoGPU :
@@ -334,11 +483,18 @@ namespace Kernel
                 throw BitmapException("[MATRIX_MULT] NOT IMPLEMENTED");
             }
 
-            case default:
+            default:
             {
-                throw BitmapException("[MATRIX_MULT] Specified Processor_Type doesn't exist")
+                throw BitmapException("[MATRIX_MULT] Specified Processor_Type doesn't exist");
             }
         }
+
+        // Finish timing
+        auto bitmap_map_build_finish = Time::now();
+        double_seconds seconds = bitmap_map_build_finish - bitmap_map_build_start;
+        performance[5] = seconds.count() * 1000; // BitmapMapBuild
+
+        return map;
     }
 }
 
@@ -515,6 +671,30 @@ namespace
         return texture;
     }
 
+    // Adds two matrices together using only the CPU, saves it into another
+    RGBQUAD** CPUAddition(const RGBQUAD* const* colorMap, int width, int height,
+                          const RGBQUAD* const* other, int otherWidth, int otherHeight)
+    {
+        RGBQUAD** resultant = AllocateDynamic2D<RGBQUAD>(width, height);
+
+        for (int j = 0; j < height; j++)
+            for (int i = 0; i < width; i++)
+            {
+                int tempR = static_cast<int>(colorMap[i][j].rgbRed) + static_cast<int>(other[i][j].rgbRed);
+                int tempG = static_cast<int>(colorMap[i][j].rgbGreen) + static_cast<int>(other[i][j].rgbGreen);
+                int tempB = static_cast<int>(colorMap[i][j].rgbBlue) + static_cast<int>(other[i][j].rgbBlue);
+                resultant[i][j].rgbRed   = (tempR < 255) ? static_cast<unsigned char>(tempR)
+                                                      : static_cast<unsigned char>(255);
+                resultant[i][j].rgbGreen = (tempG < 255) ? static_cast<unsigned char>(tempG)
+                                                      : static_cast<unsigned char>(255);
+                resultant[i][j].rgbBlue  = (tempB < 255) ? static_cast<unsigned char>(tempB)
+                                                      : static_cast<unsigned char>(255);
+            }
+
+        return resultant;
+    }
+
+    // Matrix Multiplication between to matrices done on the CPU, saves into another
     RGBQUAD** CPUMatrixMult(const RGBQUAD* const* colorMap, int width, int height,
                             const RGBQUAD* const* other, int otherWidth, int otherHeight)
     {

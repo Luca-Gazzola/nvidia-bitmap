@@ -609,6 +609,134 @@ __host__ uchar4* LaunchRandomGenerationTexture(int width, int height,
     return map;
 }
 
+// Addition
+__host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
+                                uchar4* other, int otherWidth, int otherHeight)
+{
+    return NULL;
+}
+
+__host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
+                                uchar4* otherMap, int otherWidth, int otherHeight,
+                                double performance[])
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*width*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(width, height);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
+
+    // CUDA Allocation for maps
+    uchar4* d_colorMap;
+    uchar4* d_otherMap;
+    size_t d_colorPitch;
+    size_t d_otherPitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_colorMap, &d_colorPitch,
+               width*sizeof(uchar4), height ) );
+    CUDA_CALL( cudaMallocPitch( (void **)&d_otherMap, &d_otherPitch,
+               otherWidth*sizeof(uchar4), otherHeight ) );
+
+    // Copy maps into device
+    CUDA_CALL( cudaMemcpy2D(d_colorMap, d_colorPitch, colorMap, width*sizeof(uchar4),
+               width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+    CUDA_CALL( cudaMemcpy2D(d_otherMap, d_otherPitch, otherMap, otherWidth*sizeof(uchar4),
+               otherWidth*sizeof(uchar4), otherHeight, cudaMemcpyHostToDevice) );
+
+    // Timer start
+    cudaEvent_t kernel_start, kernel_stop;
+    float kernel_time;
+    CUDA_CALL( cudaEventCreate(&kernel_start) );
+    CUDA_CALL( cudaEventCreate(&kernel_stop) );
+    CUDA_CALL( cudaEventRecord(kernel_start, 0) );
+    // Kernel call
+    __Addition<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
+                                            d_colorMap, d_colorPitch, width, height,
+                                            d_otherMap, d_otherPitch, otherWidth, otherHeight);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(kernel_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(kernel_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&kernel_time, kernel_start, kernel_stop) );
+    performance[1] = kernel_time;
+
+    // Timer start
+    cudaEvent_t copy_start, copy_stop;
+    float copy_time;
+    CUDA_CALL( cudaEventCreate(&copy_start) );
+    CUDA_CALL( cudaEventCreate(&copy_stop) );
+    CUDA_CALL( cudaEventRecord(copy_start, 0) );
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, width*sizeof(uchar4), d_map, d_pitch,
+                            width*sizeof(uchar4), height, cudaMemcpyDeviceToHost) );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(copy_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(copy_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&copy_time, copy_start, copy_stop) );
+    performance[2] = copy_time;
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaFree(d_colorMap) );
+    CUDA_CALL( cudaFree(d_otherMap) );
+
+    // CUDA Exit
+    return map;
+}
+
+// GPU Matrix Multiplication
+__host__ uchar4* LaunchMatrixMult(uchar4* colorMap, int width, int height,
+                                  uchar4* other, int otherWidth, int otherHeight)
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*otherWidth*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, height*sizeof(uchar4), otherWidth ) );
+
+    // CUDA Kepler texture
+    cudaTextureObject_t texMatrixLeft = SetupTextureObjectArray(colorMap, width, height);
+    cudaTextureObject_t texMatrixRight = SetupTextureObjectArray(other, otherWidth, otherHeight);
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(height, otherWidth);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, height, otherWidth);
+
+    // Kernel call
+    __MatrixMult<<<blocks, threadsPerBlock>>>(height, otherWidth, d_map, d_pitch,
+            width, texMatrixLeft, texMatrixRight);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, height*sizeof(uchar4), d_map, d_pitch,
+                            height*sizeof(uchar4), otherWidth, cudaMemcpyDeviceToHost) );
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaDestroyTextureObject(texMatrixLeft) );
+    CUDA_CALL( cudaDestroyTextureObject(texMatrixRight) );
+
+    // CUDA Exit
+    return map;
+}
+
 // Performance-tracking variant of LaunchMatrixMult
 __host__ uchar4* LaunchMatrixMult(uchar4* colorMap, int width, int height,
                                   uchar4* other, int otherWidth, int otherHeight,
@@ -807,6 +935,39 @@ __global__ static void __RandomGeneration(int width, int height,
     }
 
     return;
+}
+
+__global__ static void __Addition(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  uchar4* otherMap, int otherPitch, int otherWidth, int otherHeight)
+{
+    // Find x and y coordinates
+    const int idy = blockIdx.y * blockDim.y + threadIdx.y;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int col = 4 * idx;
+
+    // Retrieve matrix position
+    uchar4* current = (uchar4*)((char*)map + idy * pitch);
+
+    if (idy < height && col < width)
+    {
+        int max = (width - col < 4) ? width - col : 4;
+
+        #pragma unroll
+        for (int i = 0; i < max; ++i)
+        {
+            uchar4 currentCM = *((uchar4*)((char*)colorMap + idy * colorPitch) + col + i);
+            uchar4 currentOM = *((uchar4*)((char*)otherMap + idy * otherPitch) + col + i);
+
+            int tempR = (int)currentCM.x + (int)currentOM.x;
+            int tempG = (int)currentCM.y + (int)currentOM.y;
+            int tempB = (int)currentCM.z + (int)currentOM.z;
+
+            current[col + i].x = (tempR < 255) ? (unsigned char)tempR : (unsigned char)255;
+            current[col + i].y = (tempG < 255) ? (unsigned char)tempG : (unsigned char)255;
+            current[col + i].z = (tempB < 255) ? (unsigned char)tempB : (unsigned char)255;
+        }
+    }
 }
 
 __global__ static void __MatrixMult(int width, int height, uchar4* map, int pitch,

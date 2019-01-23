@@ -4,6 +4,8 @@
 #include <iomanip>
 #include <sstream>
 #include <functional>
+#include <string>
+#include <vector>
 // CUDA includes
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -15,11 +17,20 @@
 
 
 // Strings for Bitmap_Type and Processor_Type that reflect enums
-std::string bitmapGen[] = {"Static", "Random", "Add", "Subtract", "Multiply", "Divide"};
+std::string bitmapGen[] = {"Static", "Random", "Add", "Subtract", "Multiply", "Divide", "MatrixMult"};
 std::string procType[]  = {"GPU", "CPU", "CPUtoGPU"};
 // Create date/time
 auto datetime = std::time(nullptr);
 auto currentTime = *std::localtime(&datetime);
+// Create command struct
+struct Command_Args
+{
+    bool performance_track      = true;
+    Bitmap_Type bmp_gen         = BitmapTypeStatic;
+    Processor_Type bmp_hardware = BitmapProcessorCPU;
+    bool long_test_flag         = false;
+    int  long_test_iter         = 0;
+};
 
 void test_ExpectPass(const std::string& testName, unsigned int& testNumber, std::function<void()>& lambda)
 {
@@ -118,10 +129,110 @@ void test_LogPerformanceToFile(Bitmap& bitmap, std::ofstream& file)
     file << bitmap.Performance(BitmapPerfFileBuild)       << std::endl;
 }
 
-
-
-int main()
+Command_Args test_InterpretCommands(int argc, char** argv)
 {
+    /**
+     * struct Command_Args
+     * {
+     * bool performance_track = false;
+     * auto bmp_gen           = BitmapTypeStatic;
+     * auto bmp_hardware      = BitmapProcessorCPU;
+     * bool long_test_flag    = false;
+     * int  long_test_iter    = 0;
+     * };
+     */
+     Command_Args comm;
+
+    if (argc <= 1)
+    {
+        std::cout << "=Using default variables (count: " << argc << ")=" << std::endl;
+        std::cout << " >Performance Tracking  : " << (comm.performance_track ? "True" : "False") << std::endl;
+        std::cout << " >Bitmap Generate Type  : " << bitmapGen[static_cast<int>(comm.bmp_gen)] << std::endl;
+        std::cout << " >Bitmap Processor Type : " << procType[static_cast<int>(comm.bmp_hardware)] << std::endl;
+        std::cout << " >Long Test Execution   : " << (comm.long_test_flag ? "True" : "False") << std::endl;
+        std::cout << " >Long Test Iterations  : " << comm.long_test_iter << std::endl << std::endl;
+        return comm;
+    }
+    else if (argc > 1 && argc < 6)
+    {
+        std::cout << "Too few arguments" << std::endl;
+        throw std::runtime_error("Too few arguments (need 5)");
+    }
+    else if (argc > 6)
+    {
+        std::cout << "Too many arguments" << std::endl;
+        throw std::runtime_error("Too many arguments (need 5)");
+    }
+
+    std::string temp;
+    // Performance flag
+    temp = argv[1];
+    if (temp == std::string("performance_track=true")) comm.performance_track = true;
+    else if (temp == std::string("performance_track=false")) comm.performance_track = false;
+    else throw std::runtime_error(std::string("Performance Track argument invalid: ")
+                                  + temp);
+    // Bitmap Generation Type
+    temp = argv[2];
+    if (temp == std::string("bmp_gen=BitmapTypeStatic"))
+        comm.bmp_gen = BitmapTypeStatic;
+    else if (temp == std::string("bmp_gen=BitmapTypeRandom"))
+        comm.bmp_gen = BitmapTypeRandom;
+    else if (temp == std::string("bmp_gen=BitmapTypeMatrixMult"))
+        comm.bmp_gen = BitmapTypeMatrixMult;
+    else if (temp == std::string("bmp_gen=BitmapTypeAdd"))
+        throw std::runtime_error(temp + std::string(" is not implemented"));
+    else if (temp == std::string("bmp_gen=BitmapTypeSubtract"))
+        throw std::runtime_error(temp + std::string(" is not implemented"));
+    else if (temp == std::string("bmp_gen=BitmapTypeMultiply"))
+        throw std::runtime_error(temp + std::string(" is not implemented"));
+    else if (temp == std::string("bmp_gen=BitmapTypeDivide"))
+        throw std::runtime_error(temp + std::string(" is not implemented"));
+    else
+        throw std::runtime_error(std::string("Bitmap Generation Type argument invalid: ") + temp);
+    // Bitmap Processor Type
+    temp = argv[3];
+    if (temp == std::string("bmp_hardware=BitmapProcessorGPU"))
+        comm.bmp_hardware = BitmapProcessorGPU;
+    else if (temp == std::string("bmp_hardware=BitmapProcessorCPU"))
+        comm.bmp_hardware = BitmapProcessorCPU;
+    else if (temp == std::string("bmp_hardware=BitmapProcessorCPUtoGPU"))
+        comm.bmp_hardware = BitmapProcessorCPUtoGPU;
+    else throw std::runtime_error(std::string("Bitmap Processor Type argument invalid: ")
+                                  + temp);
+    // Long Test bool
+    temp = argv[4];
+    if (temp == std::string("long_test_flag=true")) comm.long_test_flag = true;
+    else if (temp == std::string("long_test_flag=false")) comm.long_test_flag = false;
+    else throw std::runtime_error(std::string("Long Test Flag argument invalid: ")
+                                  + temp);
+    // Long Test Iterations
+    temp = argv[5];
+    comm.long_test_iter = std::stoi(temp);
+
+    std::cout << "=Using specified variables (count: " << argc << ")=" << std::endl;
+    std::cout << " >Performance Tracking  : " << (comm.performance_track ? "True" : "False") << std::endl;
+    std::cout << " >Bitmap Generate Type  : " << bitmapGen[static_cast<int>(comm.bmp_gen)] << std::endl;
+    std::cout << " >Bitmap Processor Type : " << procType[static_cast<int>(comm.bmp_hardware)] << std::endl;
+    std::cout << " >Long Test Execution   : " << (comm.long_test_flag ? "True" : "False") << std::endl;
+    std::cout << " >Long Test Iterations  : " << comm.long_test_iter << std::endl << std::endl;
+
+    return comm;
+}
+
+
+
+int main(int argc, char** argv)
+{
+    //test_ModifyArgs(argc, argv, ' '); // Use because Makefile has args as one large string
+
+    Command_Args commands = test_InterpretCommands(argc, argv);
+
+    bool have_perf                 = commands.performance_track;
+    Bitmap_Type bitmap_gen_type    = commands.bmp_gen;
+    Processor_Type bitmap_hardware = commands.bmp_hardware;
+    bool run_prolonged             = commands.long_test_flag;
+    int test_iterations            = commands.long_test_iter;
+
     //<editor-fold desc="Constructor Tests">
 
     // Setup timeString
@@ -189,23 +300,20 @@ int main()
     /**
      * Test generations
      */
-    bool run_prolonged = false;
-    bool have_perf = true;
-    auto bitmap_gen_type = BitmapTypeRandom;
-    auto bitmap_hardware = BitmapProcessorGPU;
-    int test_iterations = 50;
     std::string location;
 
+/*
     Bitmap first(1920, 1080, have_perf);
-    Bitmap second(1080, 1920, have_perf);
+    Bitmap second(1920, 1080, have_perf);
     first.MakeBitmap(bitmap_gen_type, "first");
     test_LogPerformance(first);
     second.MakeBitmap(bitmap_gen_type, "second");
     test_LogPerformance(second);
-    std::cout << "Creating Bitmap: " << first.Height() << "x" << second.Width() << std::endl;
-    location = first.MakeBitmap(BitmapTypeMatrixMult, "matrixmult", second, bitmap_hardware);
+    std::cout << "Creating Bitmap: " << first.Width() << "x" << first.Height() << std::endl;
+    location = first.MakeBitmap(BitmapTypeAdd, "matrixAdd", second, bitmap_hardware);
     test_LogPerformance(first);
     std::cout << "Saved at " << location << std::endl << std::endl;
+*/
     /*
     Bitmap test_write(have_perf);
     std::cout << "Creating Bitmap: " << test_write.Width() << "x" << test_write.Height() << std::endl;
@@ -236,17 +344,44 @@ int main()
         test_LogPerformanceToFileHeader(file2, bitmap_gen_type, bitmap_hardware);
 
         std::cout << "=RUNNING PROLONGED TEST=" << std::endl;
-        for (int i = 0; i < test_iterations; i++)
+        if (commands.bmp_gen == BitmapTypeMatrixMult)
         {
-            std::cout << "Iteration:\t" << i << std::endl;
+            Bitmap_Type secondary_gen = BitmapTypeRandom;
+            for (int i = 0; i < test_iterations; i++)
+            {
+                std::cout << "Iteration:\t" << i << std::endl;
 
-            Bitmap test_write(have_perf);
-            test_write.MakeBitmap(bitmap_gen_type, "test_write", bitmap_hardware);
-            test_LogPerformanceToFile(test_write, file);
+                Bitmap test_writeLeft(have_perf);
+                Bitmap test_writeRight(have_perf);
+                test_writeLeft.MakeBitmap(secondary_gen, "test_matrixMultStatic", bitmap_hardware);
+                test_writeRight.MakeBitmap(secondary_gen, "test_matrixMultStatic", bitmap_hardware);
+                test_writeLeft.MakeBitmap(bitmap_gen_type, "test_matrixMultStatic",
+                                          test_writeRight, bitmap_hardware);
+                test_LogPerformanceToFile(test_writeLeft, file);
 
-            Bitmap test_write2(1920, 1080, have_perf);
-            test_write2.MakeBitmap(bitmap_gen_type, "test_write2", bitmap_hardware);
-            test_LogPerformanceToFile(test_write2, file2);
+                Bitmap test_write2Left(1920, 1080, have_perf);
+                Bitmap test_write2Right(1080, 1920, have_perf);
+                test_write2Left.MakeBitmap(secondary_gen, "test_matrixMultStaticHD", bitmap_hardware);
+                test_write2Right.MakeBitmap(secondary_gen, "test_matrixMultStaticHD", bitmap_hardware);
+                test_write2Left.MakeBitmap(bitmap_gen_type, "test_matrixMultStaticHD",
+                                           test_write2Right, bitmap_hardware);
+                test_LogPerformanceToFile(test_write2Left, file2);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < test_iterations; i++)
+            {
+                std::cout << "Iteration:\t" << i << std::endl;
+
+                Bitmap test_write(have_perf);
+                test_write.MakeBitmap(bitmap_gen_type, "test_write", bitmap_hardware);
+                test_LogPerformanceToFile(test_write, file);
+
+                Bitmap test_write2(1920, 1080, have_perf);
+                test_write2.MakeBitmap(bitmap_gen_type, "test_write2", bitmap_hardware);
+                test_LogPerformanceToFile(test_write2, file2);
+            }
         }
     }
     //</editor-fold>

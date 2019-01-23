@@ -38,9 +38,17 @@ __host__ uchar4* LaunchRandomGenerationTexture(int width, int height,
                                                uchar4* texture,
                                                double performance[]);
 
+// Addition
+__host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
+                                uchar4* other, int otherWidth, int otherHeight);
+__host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
+                                uchar4* other, int otherWidth, int otherHeight,
+                                double performance[]);
 // Matrix Multiply
 __host__ uchar4* LaunchMatrixMult(uchar4* colorMap, int width, int height,
-                                  uchar4* other, int otherWidth, int otherHeight,
+                                  uchar4* otherMap, int otherWidth, int otherHeight);
+__host__ uchar4* LaunchMatrixMult(uchar4* colorMap, int width, int height,
+                                  uchar4* otherMap, int otherWidth, int otherHeight,
                                   double performance[]);
 
 
@@ -62,6 +70,11 @@ __global__ static void __RandomGeneration(int width, int height,
 __global__ static void __RandomGeneration(int width, int height,
                                           uchar4* map, int pitch,
                                           cudaTextureObject_t tex);
+
+// Addition Kernel
+__global__ static void __Addition(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  uchar4* otherMap, int otherPitch, int otherWidth, int otherHeight);
 
 // Matrix Multiplication Kernel
 __global__ static void __MatrixMult(int width, int height, uchar4* map, int pitch,
