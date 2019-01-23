@@ -1,5 +1,13 @@
 Changelog
 =========
+23.01.2019 - 1.05
+I have finished off the Matrix Multiplication function by fixing various logic errors
+and memory issues, and by adding a non-performant tracking variant as well. I've added
+Matrix Addition to at least introduce a new algorithm to base my testing off of due to
+my abstract on my work is due tomorrow. This update is really a patch and update in one
+since I didn't take the time to push my changes earlier to my repo. Procrastination sure 
+is something. 
+
 17.01.2019 - 1.04
 New year, new version!
 After some time off, and of course developing the new version, I have added a new
@@ -20,7 +28,7 @@ of results in another program like Excel (or Libre Office for me). Both Static a
 generation having performant and non-performant tracking variants that can be selectively
 used. Should be bug free, I hope. I'll continue with new generation types post New Year.
 
-13.12.2018 - 1.02c
+13.12.2018 - 1.02b
 *This version does not have its own standalone version* 
 Processor_Types to differentiate which hardware to use (CPU/GPU/Both) as well as a more 
 in depth performance class have been implemented for easier testing and logging. Added 
@@ -32,7 +40,7 @@ already complete but the CPUtoGPU implementation is proving more difficult than 
 v1.03 will be pushed once I have finished this last implementation, and added non 
 performance-tracking variants to the project.
 
-06.12.2018 - 1.02b
+06.12.2018 - 1.02a
 I have added performance logging to the Bitmap class. It should now be easier to test the
 performance of the class, as well as routing that information somewhere (like a document
 instead of just the terminal). The constructors have been modified to have a default bool
@@ -52,7 +60,7 @@ the GPU. I utilize the CUDA Texture feature since I'm essentially creating a bit
 CPU, then copying the information from the CPU to the GPU, processing it there, then returning
 the processed bitmap back into the class.
 
-28.11.2018 - 1.01b
+28.11.2018 - 1.01a
 Discovered that the issue is not my optimization of the launched kernels by the initialization
 of my random number generator. I've changed it so that my offset is now 0, and uniquely seeds
 the kernel by the ID of the thread instead (basically moved the offset to the seed). Now it
