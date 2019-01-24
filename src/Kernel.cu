@@ -742,6 +742,11 @@ __host__ uchar4* LaunchMatrixMult(uchar4* colorMap, int width, int height,
                                   uchar4* other, int otherWidth, int otherHeight,
                                   double performance[])
 {
+    // DEBUG
+    size_t amount, total;
+    CUDA_DRIVER_CALL( cuMemGetInfo(&amount, &total) );
+    printf(">> %lu/%lu MB used.\n", (total - amount)/(1024*1024), total/(1024*1024));
+
     // Host Allocation for the container holding the 3 color flattened arrays
     // The resultant matrix using the height and otherWidth because
     // height = x of resultant && otherWidth = y of resultant
@@ -987,6 +992,14 @@ __global__ static void __MatrixMult(int width, int height, uchar4* map, int pitc
     double heightDownscale = 1.0 / (double)height;
     double charDownscale = 1.0 / 255.0;
 
+    double sumR;
+    double sumG;
+    double sumB;
+
+    uchar4* texelLeft;
+    uchar4* texelRight;
+    uchar4* curElement;
+
     if (idy < height && col < width)
     {
         int max = (width - col < 4) ? width - col : 4;
@@ -994,22 +1007,22 @@ __global__ static void __MatrixMult(int width, int height, uchar4* map, int pitc
         #pragma unroll
         for (int i = 0; i < max; ++i)
         {
-            double sumR = 0.0;
-            double sumG = 0.0;
-            double sumB = 0.0;
+            sumR = 0.0;
+            sumG = 0.0;
+            sumB = 0.0;
 
             // Iterate through row of left and col of right
             for (int k = 0; k < colRowLength; ++k)
             {
-                uchar4 texelLeft  = tex2D<uchar4>(texLeft, k, idy);
-                uchar4 texelRight = tex2D<uchar4>(texRight, col + i, k);
+                texelLeft  = &tex2D<uchar4>(texLeft, k, idy);
+                texelRight = &tex2D<uchar4>(texRight, col + i, k);
 
-                sumR += (double) texelLeft.x * (double) texelRight.x * heightDownscale * charDownscale;
-                sumG += (double) texelLeft.y * (double) texelRight.y * heightDownscale * charDownscale;
-                sumB += (double) texelLeft.z * (double) texelRight.z * heightDownscale * charDownscale;
+                sumR += (double) texelLeft->x * (double) texelRight->x * heightDownscale * charDownscale;
+                sumG += (double) texelLeft->y * (double) texelRight->y * heightDownscale * charDownscale;
+                sumB += (double) texelLeft->z * (double) texelRight->z * heightDownscale * charDownscale;
             }
 
-            uchar4* curElement = current + col + i;
+            curElement    = current + col + i;
             curElement->x = (unsigned char) sumR;
             curElement->y = (unsigned char) sumG;
             curElement->z = (unsigned char) sumB;

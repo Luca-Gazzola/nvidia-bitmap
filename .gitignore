@@ -6,3 +6,4 @@
 *.fatbin
 ./bitmaps/
 *.bmp
+./cmake-build-debug/
