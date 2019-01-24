@@ -1,5 +1,15 @@
 Changelog
 =========
+24.01.2019 - 1.05a
+Due to realizing that the GPU crashes when Matrix Multiplication is running for a
+prolonged period of time, I have tried to be more careful when using my stack allocated
+memory. While it has improved only slightly, it will still crash if the program is
+running for too long despite having no leaks. This is due to the way the GPU retains
+memory through the programs life cycle. For the time being, I can't fix this. I've
+also added better arg functionality when running this through the Makefile. Now you can
+put any amount of args (below 6) in any order rather than having to follow a specific
+one.
+
 23.01.2019 - 1.05
 I have finished off the Matrix Multiplication function by fixing various logic errors
 and memory issues, and by adding a non-performant tracking variant as well. I've added
