@@ -166,8 +166,7 @@ void test_InterpretFlag(Command_Args& comm, char* arg)
     else if (temp == std::string("long_test_flag=false"))
     { comm.long_test_flag = false; return; }
     // Long Test Iterations
-    char* rtemp;
-    int temp2 = std::strtol(temp.c_str(), &rtemp, 4);
+    int temp2 = std::stoi(temp);
     if (temp2 != 0)
     { comm.long_test_iter = temp2;  return; }
 
@@ -354,7 +353,7 @@ int main(int argc, char** argv)
         std::cout << "========================" << std::endl;
         if (commands.bmp_gen == BitmapTypeMatrixMult)
         {
-            Bitmap_Type secondary_gen = BitmapTypeRandom;
+            Bitmap_Type secondary_gen = BitmapTypeStatic;
             for (int i = 0; i < test_iterations; i++)
             {
                 std::cout << "Iteration:\t" << i << std::endl;
@@ -382,7 +381,7 @@ int main(int argc, char** argv)
         }
         else if (commands.bmp_gen == BitmapTypeAdd)
         {
-            Bitmap_Type secondary_gen = BitmapTypeRandom;
+            Bitmap_Type secondary_gen = BitmapTypeStatic;
             for (int i = 0; i < test_iterations; i++)
             {
                 std::cout << "Iteration:\t" << i << std::endl;
