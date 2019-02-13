@@ -1,5 +1,14 @@
 Changelog
 =========
+13.02.2019 - 1.06
+After a nice week long break post-presentation, I've come back to again work on this
+class because why not, I don't have anything else to do right now. I've finished off
+the non-tracking Addition, as well as added a Subtraction variant (performant and
+non-performant tracking). Apparently there was an issue using the Matrix Multiplication
+that I wasn't aware of, just a minor warning regarding a temporary address usage, which
+is now fixed. Given that I don't have any other work given to me, or materials to
+teach myself new things, I'll continue working on this project for the time being.
+
 24.01.2019 - 1.05a
 Due to realizing that the GPU crashes when Matrix Multiplication is running for a
 prolonged period of time, I have tried to be more careful when using my stack allocated
