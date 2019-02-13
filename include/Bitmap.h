@@ -67,7 +67,7 @@ private:
     void GenerateStatic(Processor_Type hardware);
     void GenerateRandom(Processor_Type hardware);
     void GenerateAdd(Processor_Type hardware, const Bitmap& other);
-    void GenerateSubtract();
+    void GenerateSubtract(Processor_Type hardware, const Bitmap& other);
     void GenerateMultiply();
     void GenerateDivide();
     void GenerateMatrixMult(Processor_Type hardware, const Bitmap& other);

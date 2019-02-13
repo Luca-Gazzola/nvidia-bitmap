@@ -18,6 +18,10 @@ namespace Kernel
                        const RGBQUAD* const* other, int otherWidth, int otherHeight);
     RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                        const RGBQUAD* const* other, int otherWidth, int otherHeight, double performance[]);
+    RGBQUAD** Subtract(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       const RGBQUAD* const* other, int otherWidth, int otherHeight);
+    RGBQUAD** Subtract(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       const RGBQUAD* const* other, int otherWidth, int otherHeight, double performance[]);
     RGBQUAD** MatrixMult(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                          const RGBQUAD* const* other, int otherWidth, int otherHeight);
     RGBQUAD** MatrixMult(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
@@ -43,6 +47,8 @@ namespace
     unsigned char* CPUGenerateStaticMap(int width, int height);
     uchar4* CPUGenerateRandomMap(int width, int height);
     RGBQUAD** CPUAddition(const RGBQUAD* const* colorMap, int width, int height,
+                          const RGBQUAD* const* other, int otherWidth, int otherHeight);
+    RGBQUAD** CPUSubtract(const RGBQUAD* const* colorMap, int width, int height,
                           const RGBQUAD* const* other, int otherWidth, int otherHeight);
     RGBQUAD** CPUMatrixMult(const RGBQUAD* const* colorMap, int width, int height,
                             const RGBQUAD* const* other, int otherWidth, int otherHeight);

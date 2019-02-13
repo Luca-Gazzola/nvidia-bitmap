@@ -301,7 +301,7 @@ int main(int argc, char** argv)
      */
     std::string location;
 
-/*
+
     Bitmap first(1920, 1080, have_perf);
     Bitmap second(1920, 1080, have_perf);
     first.MakeBitmap(bitmap_gen_type, "first");
@@ -309,11 +309,11 @@ int main(int argc, char** argv)
     second.MakeBitmap(bitmap_gen_type, "second");
     test_LogPerformance(second);
     std::cout << "Creating Bitmap: " << first.Width() << "x" << first.Height() << std::endl;
-    location = first.MakeBitmap(BitmapTypeAdd, "matrixAdd", second, bitmap_hardware);
+    location = first.MakeBitmap(BitmapTypeSubtract, "matrixSub", second, bitmap_hardware);
     test_LogPerformance(first);
     std::cout << "Saved at " << location << std::endl << std::endl;
-*/
-    /*
+
+/*
     Bitmap test_write(have_perf);
     std::cout << "Creating Bitmap: " << test_write.Width() << "x" << test_write.Height() << std::endl;
     location = test_write.MakeBitmap(bitmap_gen_type, "test_write", bitmap_hardware);
@@ -325,7 +325,7 @@ int main(int argc, char** argv)
     location = test_write2.MakeBitmap(bitmap_gen_type, "test_write2", bitmap_hardware);
     test_LogPerformance(test_write2);
     std::cout << "Saved at " << location << std::endl << std::endl;
-    */
+*/
 
     //<editor-fold desc="Prolonged Tests">
     if (run_prolonged)

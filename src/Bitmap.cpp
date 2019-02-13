@@ -202,7 +202,7 @@ const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName, cons
     switch (gen)
     {
         case Bitmap_Type::Add       : GenerateAdd(hardware, other);         break;
-        case Bitmap_Type::Subtract  : GenerateSubtract();                   break;
+        case Bitmap_Type::Subtract  : GenerateSubtract(hardware, other);    break;
         case Bitmap_Type::Multiply  : GenerateMultiply();                   break;
         case Bitmap_Type::Divide    : GenerateDivide();                     break;
         case Bitmap_Type::MatrixMult: GenerateMatrixMult(hardware, other);  break;
@@ -336,9 +336,24 @@ void Bitmap::GenerateAdd(Processor_Type hardware, const Bitmap& other)
     m_color = resultant;
 }
 
-void Bitmap::GenerateSubtract()
+void Bitmap::GenerateSubtract(Processor_Type hardware, const Bitmap& other)
 {
+    if (!m_color || !other.m_color)
+        throw BitmapException("[ADDITION] This object's bitmap or the other's bitmap is missing (nullptr)");
 
+    RGBQUAD** resultant = nullptr;
+
+    if (!m_track_performance)
+        resultant = Kernel::Subtract(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biHeight);
+    else
+        resultant = Kernel::Subtract(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biHeight,
+                                     m_performance.performanceArray);
+
+    DeleteColorMap();
+    SetBitmapInformation(m_bmpInfo.biWidth, m_bmpInfo.biHeight);
+    m_color = resultant;
 }
 
 void Bitmap::GenerateMultiply()
