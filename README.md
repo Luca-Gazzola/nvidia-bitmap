@@ -15,5 +15,6 @@ wanting to learn, not for the actual practical use of it.
 
 ## Changes
 Latest Version: 1.06
+
 Please view the changelog for updates. Yeah I should combine them but I don't wanna.
 
