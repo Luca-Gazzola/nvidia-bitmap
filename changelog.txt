@@ -1,5 +1,11 @@
 Changelog
 =========
+13.02.2019 - 1.06a
+After pushing the last major update, I've added a variant of Addition that now allows
+it to add all pixels by a single constant number. I've decided to add this feature to
+Addition, Subtraction, Multiplication, and Division. It's a minor update, with only
+this feature so...yeah.
+
 13.02.2019 - 1.06
 After a nice week long break post-presentation, I've come back to again work on this
 class because why not, I don't have anything else to do right now. I've finished off
