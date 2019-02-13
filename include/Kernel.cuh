@@ -44,6 +44,10 @@ __host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
 __host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
                                 uchar4* otherMap, int otherWidth, int otherHeight,
                                 double performance[]);
+__host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
+                                int constant);
+__host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
+                                int constant, double performance[]);
 
 // Subtract
 __host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
@@ -83,6 +87,9 @@ __global__ static void __RandomGeneration(int width, int height,
 __global__ static void __Addition(uchar4* map, int pitch,
                                   uchar4* colorMap, int colorPitch, int width, int height,
                                   uchar4* otherMap, int otherPitch, int otherWidth, int otherHeight);
+__global__ static void __Addition(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  int constant);
 
 // Subtract Kernel
 __global__ static void __Subtract(uchar4* map, int pitch,

@@ -34,6 +34,8 @@ public:
                                  Processor_Type hardware = Processor_Type::GPU);
     const std::string MakeBitmap(Bitmap_Type gen, std::string fileName, const Bitmap& other,
                                  Processor_Type hardware = Processor_Type::GPU);
+    const std::string MakeBitmap(Bitmap_Type gen, std::string fileName, int constant,
+                                 Processor_Type hardware = Processor_Type::GPU);
 
     /**
      * Public Methods
@@ -67,12 +69,16 @@ private:
     void GenerateStatic(Processor_Type hardware);
     void GenerateRandom(Processor_Type hardware);
     void GenerateAdd(Processor_Type hardware, const Bitmap& other);
+    void GenerateAdd(Processor_Type hardware, int constant);
     void GenerateSubtract(Processor_Type hardware, const Bitmap& other);
+    //void GenerateSubtract(Processor_Type hardware, int constant);
     void GenerateMultiply();
     void GenerateDivide();
     void GenerateMatrixMult(Processor_Type hardware, const Bitmap& other);
 
     // File write
+    std::ofstream CreateFile(std::string filePath,
+                             const std::string& fileName);
     void WriteData(std::ofstream& file);
     void WriteData(std::ofstream& file, double performance[]);
 

@@ -309,7 +309,7 @@ int main(int argc, char** argv)
     second.MakeBitmap(bitmap_gen_type, "second");
     test_LogPerformance(second);
     std::cout << "Creating Bitmap: " << first.Width() << "x" << first.Height() << std::endl;
-    location = first.MakeBitmap(BitmapTypeSubtract, "matrixSub", second, bitmap_hardware);
+    location = first.MakeBitmap(BitmapTypeAdd, "matrixAdd", 100, bitmap_hardware);
     test_LogPerformance(first);
     std::cout << "Saved at " << location << std::endl << std::endl;
 

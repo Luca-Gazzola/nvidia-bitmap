@@ -14,14 +14,21 @@ namespace Kernel
     RGBQUAD** RandomGeneration(Processor_Type hardware, int width, int height);
     RGBQUAD** RandomGeneration(Processor_Type hardware, int width, int height, double performance[]);
     // Modification
+    // Addition Variants
     RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                        const RGBQUAD* const* other, int otherWidth, int otherHeight);
     RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                        const RGBQUAD* const* other, int otherWidth, int otherHeight, double performance[]);
+    RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant);
+    RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant, double performance[]);
+    // Subtraction Variants
     RGBQUAD** Subtract(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                        const RGBQUAD* const* other, int otherWidth, int otherHeight);
     RGBQUAD** Subtract(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                        const RGBQUAD* const* other, int otherWidth, int otherHeight, double performance[]);
+    // Matrix Multiplication Variants
     RGBQUAD** MatrixMult(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                          const RGBQUAD* const* other, int otherWidth, int otherHeight);
     RGBQUAD** MatrixMult(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
@@ -42,14 +49,21 @@ namespace
     RGBQUAD** UnflattenCopyToDynamic2D(uchar4* map, int width, int height);
 
     // CPU Variants of GPU functionality
+    // CPU Generation of Maps
     unsigned char* CPUGenerateMap(int width, int height, const unsigned char& type);
     uchar4* CPUGenerateMap(int width, int height, const uchar4& type);
     unsigned char* CPUGenerateStaticMap(int width, int height);
     uchar4* CPUGenerateRandomMap(int width, int height);
+    // CPU Modifications
+    // Addition
     RGBQUAD** CPUAddition(const RGBQUAD* const* colorMap, int width, int height,
                           const RGBQUAD* const* other, int otherWidth, int otherHeight);
+    RGBQUAD** CPUAddition(const RGBQUAD* const* colorMap, int width, int height,
+                          int constant);
+    // Subtraction
     RGBQUAD** CPUSubtract(const RGBQUAD* const* colorMap, int width, int height,
                           const RGBQUAD* const* other, int otherWidth, int otherHeight);
+    // Matrix Multiplication
     RGBQUAD** CPUMatrixMult(const RGBQUAD* const* colorMap, int width, int height,
                             const RGBQUAD* const* other, int otherWidth, int otherHeight);
 }

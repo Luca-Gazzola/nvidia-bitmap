@@ -10,7 +10,10 @@
 
 namespace Kernel
 {
-    // Initializes devices
+    // Initializes devices which uses CUDA C calls. I need to move
+    // this function over to Kernel.cu rather than this Kernel
+    // namespace due to the "Wrapper" nature this is supposed to
+    // be. Should do it soon, hopefully, if I remember.
     void CudaSetup()
     {
         // Device information data
@@ -277,6 +280,9 @@ namespace Kernel
         return colorMap;
     }
 
+    // Wraps the Addition kernels from Kernel.cu so that it remains
+    // C++ compatible without having to conform to using C-style calls
+    // and functions
     RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                        const RGBQUAD* const* other, int otherWidth, int otherHeight)
     {
@@ -415,6 +421,135 @@ namespace Kernel
         return map;
     }
 
+    RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant)
+    {
+        // Holds newly constructed RGB map
+        RGBQUAD** map = nullptr;
+
+        switch(hardware)
+        {
+            case Processor_Type::GPU :
+            {
+                // Create two flat copies of each map to prep for GPU computation
+                uchar4* thisMap = FlattenCopyDynamic2D(colorMap, width, height);
+
+                // Run GPU Matrix Mult
+                uchar4* result = LaunchAddition(thisMap, width, height, constant);
+
+                if (!result)
+                    throw BitmapException("[ADDITION] GPU computation failed");
+
+                // Deallocate flattened maps post-GPU use
+                delete[] thisMap;
+
+                // Convert back to RGBQUAD (from uchar4)
+                map = UnflattenCopyToDynamic2D(result, width, height);
+
+                // Deallocate resultant matrix (C-style)
+                free(result);
+
+                break;
+            }
+
+            case Processor_Type::CPU :
+            {
+                // Run CPU generation with 0/255 values and save to a flattened array
+                map = CPUAddition(colorMap, width, height, constant);
+
+                break;
+            }
+
+            case Processor_Type::CPUtoGPU :
+            {
+                throw BitmapException("[ADDITION] NOT IMPLEMENTED");
+            }
+
+            default:
+            {
+                throw BitmapException("[ADDITION] Specified Processor_Type doesn't exist");
+            }
+        }
+
+        return map;
+    }
+
+    RGBQUAD** Addition(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant, double performance[])
+    {
+        // Timer --> easier to type
+        typedef std::chrono::high_resolution_clock Time;
+        typedef std::chrono::duration<double> double_seconds;
+
+        // Time initialization for the RGB map build
+        auto bitmap_map_build_start = Time::now();
+
+        // Holds newly constructed RGB map
+        RGBQUAD** map = nullptr;
+
+        switch(hardware)
+        {
+            case Processor_Type::GPU :
+            {
+                // Create two flat copies of each map to prep for GPU computation
+                uchar4* thisMap = FlattenCopyDynamic2D(colorMap, width, height);
+
+                // Run GPU Matrix Mult
+                uchar4* result = LaunchAddition(thisMap, width, height, constant, performance);
+
+                if (!result)
+                    throw BitmapException("[ADDITION] GPU computation failed");
+
+                // Deallocate flattened maps post-GPU use
+                delete[] thisMap;
+
+                // Convert back to RGBQUAD (from uchar4)
+                map = UnflattenCopyToDynamic2D(result, width, height);
+
+                // Deallocate resultant matrix (C-style)
+                free(result);
+
+                break;
+            }
+
+            case Processor_Type::CPU :
+            {
+                // Time measurement for CPU RNG initialization
+                auto init_CPU_time_start = Time::now();
+
+                // Run CPU generation with 0/255 values and save to a flattened array
+                map = CPUAddition(colorMap, width, height, constant);
+
+                // Finish timing
+                auto init_CPU_time_finish = Time::now();
+                double_seconds seconds = init_CPU_time_finish - init_CPU_time_start;
+                performance[3] = seconds.count() * 1000; // CPUMapInit
+
+                break;
+            }
+
+            case Processor_Type::CPUtoGPU :
+            {
+                throw BitmapException("[ADDITION] NOT IMPLEMENTED");
+            }
+
+            default:
+            {
+                throw BitmapException("[ADDITION] Specified Processor_Type doesn't exist");
+            }
+        }
+
+        // Finish timing
+        auto bitmap_map_build_finish = Time::now();
+        double_seconds seconds = bitmap_map_build_finish - bitmap_map_build_start;
+        performance[5] = seconds.count() * 1000; // BitmapMapBuild
+
+        return map;
+    }
+
+    // Wraps the Subtraction kernels from Kernel.cu so that it remains
+    // C++ compatible without having to conform to using C-style calls
+    // and functions
     RGBQUAD** Subtract(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                        const RGBQUAD* const* other, int otherWidth, int otherHeight)
     {
@@ -434,7 +569,7 @@ namespace Kernel
 
                 // Run GPU Matrix Mult
                 uchar4* result = LaunchSubtract(thisMap, width, height,
-                                                otherMap, otherWidth, otherHeight, performance);
+                                                otherMap, otherWidth, otherHeight);
 
                 if (!result)
                     throw BitmapException("[SUBTRACT] GPU computation failed");
@@ -880,6 +1015,29 @@ namespace
                                                       : static_cast<unsigned char>(255);
                 resultant[i][j].rgbBlue  = (tempB < 255) ? static_cast<unsigned char>(tempB)
                                                       : static_cast<unsigned char>(255);
+            }
+
+        return resultant;
+    }
+
+    // Adds a matrix and a constant together only using the CPU, saves it to another
+    RGBQUAD** CPUAddition(const RGBQUAD* const* colorMap, int width, int height,
+                          int constant)
+    {
+        RGBQUAD** resultant = AllocateDynamic2D<RGBQUAD>(width, height);
+
+        for (int j = 0; j < height; j++)
+            for (int i = 0; i < width; i++)
+            {
+                int tempR = static_cast<int>(colorMap[i][j].rgbRed) + constant;
+                int tempG = static_cast<int>(colorMap[i][j].rgbGreen) + constant;
+                int tempB = static_cast<int>(colorMap[i][j].rgbBlue) + constant;
+                resultant[i][j].rgbRed   = (tempR < 255) ? static_cast<unsigned char>(tempR)
+                                                         : static_cast<unsigned char>(255);
+                resultant[i][j].rgbGreen = (tempG < 255) ? static_cast<unsigned char>(tempG)
+                                                         : static_cast<unsigned char>(255);
+                resultant[i][j].rgbBlue  = (tempB < 255) ? static_cast<unsigned char>(tempB)
+                                                         : static_cast<unsigned char>(255);
             }
 
         return resultant;

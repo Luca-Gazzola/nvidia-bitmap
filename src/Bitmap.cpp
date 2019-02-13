@@ -125,14 +125,8 @@ const std::string Bitmap::MakeBitmap(std::string fileName)
     SetPerformanceInformation();
 
     // Output color map to file output (.bmp file)
-    const std::string path("./bitmaps/");
-    const std::string filePath(path + fileName + ".bmp");
-    std::ofstream file(filePath, std::ofstream::out | std::ofstream::binary);
-    if (file.fail())
-    {
-        mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-        file.open(filePath, std::ofstream::out | std::ofstream::binary);
-    }
+    const std::string filePath("./bitmaps/" + fileName + ".bmp");
+    std::ofstream file = CreateFile(filePath, fileName);
 
     // Write to opened file
     file.write((char *)(&m_bmpHead), 14);
@@ -169,14 +163,8 @@ const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName,
     }
 
     // Output color map to file output (.bmp file)
-    const std::string path("./bitmaps/");
-    const std::string filePath(path + fileName + ".bmp");
-    std::ofstream file(filePath, std::ofstream::out | std::ofstream::binary);
-    if (file.fail())
-    {
-        mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-        file.open(filePath, std::ofstream::out | std::ofstream::binary);
-    }
+    const std::string filePath("./bitmaps/" + fileName + ".bmp");
+    std::ofstream file = CreateFile(filePath, fileName);
 
     // Write to opened file
     if (!m_track_performance)
@@ -210,14 +198,39 @@ const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName, cons
     }
 
     // Output color map to file output (.bmp file)
-    const std::string path("./bitmaps/");
-    const std::string filePath(path + fileName + ".bmp");
-    std::ofstream file(filePath, std::ofstream::out | std::ofstream::binary);
-    if (file.fail())
+    const std::string filePath("./bitmaps/" + fileName + ".bmp");
+    std::ofstream file = CreateFile(filePath, fileName);
+
+    // Write to opened file
+    if (!m_track_performance)
+        WriteData(file);
+    else
+        WriteData(file, m_performance.performanceArray);
+
+    // Clean-up
+    file.close();
+
+    return filePath;
+}
+
+const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName, int constant,
+                                     Processor_Type hardware)
+{
+    // Reset performance
+    SetPerformanceInformation();
+
+    switch (gen)
     {
-        mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-        file.open(filePath, std::ofstream::out | std::ofstream::binary);
+        case Bitmap_Type::Add       : GenerateAdd(hardware, constant);      break;
+        case Bitmap_Type::Subtract  : GenerateSubtract(hardware, Bitmap()); break;
+        case Bitmap_Type::Multiply  : GenerateMultiply();                   break;
+        case Bitmap_Type::Divide    : GenerateDivide();                     break;
+        default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Type");
     }
+
+    // Output color map to file output (.bmp file)
+    const std::string filePath("./bitmaps/" + fileName + ".bmp");
+    std::ofstream file = CreateFile(filePath, fileName);
 
     // Write to opened file
     if (!m_track_performance)
@@ -336,6 +349,35 @@ void Bitmap::GenerateAdd(Processor_Type hardware, const Bitmap& other)
     m_color = resultant;
 }
 
+void Bitmap::GenerateAdd(Processor_Type hardware, int constant)
+{
+    if (!m_color)
+        throw BitmapException("[ADDITION] This object's bitmap is missing (nullptr)");
+
+    // If you try to add with a negative number, GenerateSubtract
+    // will be called instead, with the positive variant of the
+    // constant number. This is more of a safety catch than
+    // anything, and I highly doubt I need this.
+    if (constant < 0)
+    {
+        //GenerateSubtract(hardware, -constant);
+        return;
+    }
+
+    RGBQUAD** resultant = nullptr;
+
+    if (!m_track_performance)
+        resultant = Kernel::Addition(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     constant);
+    else
+        resultant = Kernel::Addition(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     constant, m_performance.performanceArray);
+
+    DeleteColorMap();
+    SetBitmapInformation(m_bmpInfo.biWidth, m_bmpInfo.biHeight);
+    m_color = resultant;
+}
+
 void Bitmap::GenerateSubtract(Processor_Type hardware, const Bitmap& other)
 {
     if (!m_color || !other.m_color)
@@ -390,6 +432,20 @@ void Bitmap::GenerateMatrixMult(Processor_Type hardware, const Bitmap& other)
 /**
  * File write
  */
+std::ofstream Bitmap::CreateFile(std::string filePath,
+                                 const std::string& fileName)
+{
+    std::ofstream file(filePath, std::ofstream::out | std::ofstream::binary);
+    if (file.fail())
+    {
+        std::string path = filePath.erase(filePath.find(fileName + ".bmp"),
+                                          fileName.length() + 4);
+        mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+        file.open(filePath, std::ofstream::out | std::ofstream::binary);
+    }
+    return file;
+}
+
 void Bitmap::WriteData(std::ofstream& file)
 {
     if (!m_color)
