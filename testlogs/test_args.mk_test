@@ -1,1 +1,0 @@
-performance_track=true bmp_gen=BitmapTypeMatrixMult bmp_hardware=BitmapProcessorGPU long_test_flag=true 5
