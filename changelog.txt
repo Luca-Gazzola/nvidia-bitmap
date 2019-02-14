@@ -1,5 +1,11 @@
 Changelog
 =========
+14.02.2019 - 1.07a
+Only really important to the repository itself. I just removed several files and
+directories due to their unimportance. They are just there due to a full upload
+of the project. I may re-introduce the testlogs directory for the sake of reports
+and whatnot, but for the time being it's not very important.
+
 14.02.2019 - 1.07
 Happy Valentines Day, and I'm here in lab working on this project because why not.
 Anyways, I've added full Subtraction functionality including performant and 
