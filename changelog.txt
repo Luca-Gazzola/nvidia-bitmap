@@ -1,5 +1,15 @@
 Changelog
 =========
+14.02.2019 - 1.07
+Happy Valentines Day, and I'm here in lab working on this project because why not.
+Anyways, I've added full Subtraction functionality including performant and 
+non-performant tracking, as well as using operator- on the Bitmap. It's also
+possible to use a constant on the Bitmap as well. Addition and Subtraction should
+now be fully working. I've also modified many different aspects of the Bitmap
+class as well, including the way Bitmaps are made (MakeBitmap) and drawn (new
+function called DrawBitmap). Various logic changes have been made, and hopefully
+all affected code should be properly fixed so that it works with the new logic.
+
 13.02.2019 - 1.06a
 After pushing the last major update, I've added a variant of Addition that now allows
 it to add all pixels by a single constant number. I've decided to add this feature to
