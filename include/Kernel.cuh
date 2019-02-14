@@ -55,6 +55,10 @@ __host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
 __host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
                                 uchar4* otherMap, int otherWidth, int otherHeight,
                                 double performance[]);
+__host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
+                                int constant);
+__host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
+                                int constant, double performance[]);
 
 // Matrix Multiply
 __host__ uchar4* LaunchMatrixMult(uchar4* colorMap, int width, int height,
@@ -95,6 +99,9 @@ __global__ static void __Addition(uchar4* map, int pitch,
 __global__ static void __Subtract(uchar4* map, int pitch,
                                   uchar4* colorMap, int colorPitch, int width, int height,
                                   uchar4* otherMap, int otherPitch, int otherWidth, int otherHeight);
+__global__ static void __Subtract(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  int constant);
 
 // Matrix Multiplication Kernel
 __global__ static void __MatrixMult(int width, int height, uchar4* map, int pitch,

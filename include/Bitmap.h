@@ -27,21 +27,31 @@ public:
     ~Bitmap();
 
     /**
+     * Operator Overloads
+     */
+     void operator= (const Bitmap& other);
+     Bitmap operator+ (const Bitmap& other);
+     Bitmap operator+ (int constant);
+     Bitmap operator- (const Bitmap& other);
+     Bitmap operator- (int constant);
+
+    /**
      * Bitmap Generators - Methods
      */
-    const std::string MakeBitmap(std::string fileName);
-    const std::string MakeBitmap(Bitmap_Type gen, std::string fileName,
-                                 Processor_Type hardware = Processor_Type::GPU);
-    const std::string MakeBitmap(Bitmap_Type gen, std::string fileName, const Bitmap& other,
-                                 Processor_Type hardware = Processor_Type::GPU);
-    const std::string MakeBitmap(Bitmap_Type gen, std::string fileName, int constant,
-                                 Processor_Type hardware = Processor_Type::GPU);
+    void MakeBitmap(Bitmap_Type gen,
+                    Processor_Type hardware = Processor_Type::GPU);
+    void MakeBitmap(Bitmap_Type gen, const Bitmap& other,
+                    Processor_Type hardware = Processor_Type::GPU);
+    void MakeBitmap(Bitmap_Type gen, int constant,
+                    Processor_Type hardware = Processor_Type::GPU);
 
     /**
      * Public Methods
      */
+    std::string DrawBitmap(std::string fileName);
     const int Width() noexcept;
     const int Height() noexcept;
+    void SetDefaultHardware(const Processor_Type hardware) noexcept;
     const double& Performance(Bitmap_Performance::GPU timeType) noexcept;
     const double& Performance(Bitmap_Performance::CPU timeType) noexcept;
     const double& Performance(Bitmap_Performance::Bitmap timeType) noexcept;
@@ -53,6 +63,8 @@ private:
     */
     // Map
     RGBQUAD** m_color;
+    // Bitmap default Hardware Types
+    Processor_Type m_defaultHardware;
     // Bitmap Information
     BITMAPFILEHEADER m_bmpHead;
     BITMAPINFOHEADER m_bmpInfo;
@@ -71,7 +83,7 @@ private:
     void GenerateAdd(Processor_Type hardware, const Bitmap& other);
     void GenerateAdd(Processor_Type hardware, int constant);
     void GenerateSubtract(Processor_Type hardware, const Bitmap& other);
-    //void GenerateSubtract(Processor_Type hardware, int constant);
+    void GenerateSubtract(Processor_Type hardware, int constant);
     void GenerateMultiply();
     void GenerateDivide();
     void GenerateMatrixMult(Processor_Type hardware, const Bitmap& other);
@@ -91,6 +103,7 @@ private:
     void SetPerformanceInformation() noexcept;
     RGBQUAD** AllocateColorMap(int width, int height);
     RGBQUAD** CopyColorMap(RGBQUAD** map, int width, int height);
+    Bitmap Clone();
     void DeleteColorMap();
 };
 

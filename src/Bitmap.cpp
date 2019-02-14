@@ -32,6 +32,7 @@
     // Setup Bitmap structs
     SetBitmapInformation(256, 256);
     SetPerformanceInformation();
+    SetDefaultHardware(Processor_Type::CPU);
 
     // Allocated after info setup to prevent leaks
     m_color = AllocateColorMap(256, 256);
@@ -57,6 +58,7 @@ Bitmap::Bitmap(int side, bool track_performance)
     // Setup Bitmap structs
     SetBitmapInformation(side, side);
     SetPerformanceInformation();
+    SetDefaultHardware(Processor_Type::CPU);
 
     // Allocated after conditional to prevent leaks
     m_color = AllocateColorMap(side, side);
@@ -82,6 +84,7 @@ Bitmap::Bitmap(int width, int height, bool track_performance)
     // Setup Bitmap structs
     SetBitmapInformation(width, height);
     SetPerformanceInformation();
+    SetDefaultHardware(Processor_Type::CPU);
 
     // Allocated after conditional to prevent leaks
     m_color = AllocateColorMap(width, height);
@@ -90,9 +93,10 @@ Bitmap::Bitmap(int width, int height, bool track_performance)
 // Copy Constructor
 Bitmap::Bitmap(const Bitmap& other)
     : m_color(nullptr), m_track_performance(other.m_track_performance),
-      m_bmpHead(other.m_bmpHead), m_bmpInfo(other.m_bmpInfo)
+      m_bmpHead(other.m_bmpHead), m_bmpInfo(other.m_bmpInfo),
+      m_defaultHardware(other.m_defaultHardware)
 {
-     SetPerformanceInformation();
+    SetPerformanceInformation();
 
     // No CUDA setup necessary since it is copy
     // constructing from another constructed Bitmap
@@ -111,45 +115,60 @@ Bitmap::~Bitmap()
 
 
 /**
-* Bitmap Generator
-*/
-// Generates Bitmap with the already stored map
-// Returns the filepath of the generated Bitmap
-const std::string Bitmap::MakeBitmap(std::string fileName)
+ * Operator Overloads
+ */
+ // Assignment
+void Bitmap::operator= (const Bitmap& other)
 {
-    // Checks if m_color is a nullptr
-    if (!m_color)
-        throw BitmapException("[MAKE_BITMAP] No color map to use");
+    DeleteColorMap();
+    m_track_performance = other.m_track_performance;
+    m_bmpHead = other.m_bmpHead;
+    m_bmpInfo = other.m_bmpInfo;
 
-    // Reset performance
     SetPerformanceInformation();
 
-    // Output color map to file output (.bmp file)
-    const std::string filePath("./bitmaps/" + fileName + ".bmp");
-    std::ofstream file = CreateFile(filePath, fileName);
-
-    // Write to opened file
-    file.write((char *)(&m_bmpHead), 14);
-    file.write((char *)(&m_bmpInfo), 40);
-
-    for (int row = 0; row < m_bmpInfo.biHeight; ++row)
-        for (int col = 0; col < m_bmpInfo.biWidth; ++col)
-        {
-            file << m_color[col][row].rgbBlue;   // Blue channel
-            file << m_color[col][row].rgbGreen;  // Green channel
-            file << m_color[col][row].rgbRed;    // Red channel
-        }
-
-    // Clean-up
-    file.close();
-
-    return filePath;
+    // No CUDA setup necessary since it is copy
+    // constructing from another constructed Bitmap
+    m_color = CopyColorMap(other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biWidth);
 }
 
+// Addition by Bitmap and by constant
+Bitmap Bitmap::operator+ (const Bitmap& other)
+{
+    Bitmap clone = Clone();
+    clone.MakeBitmap(Bitmap_Type::Add, other, m_defaultHardware);
+    return clone;
+}
+
+Bitmap Bitmap::operator+ (int constant)
+{
+    Bitmap clone = Clone();
+    clone.MakeBitmap(Bitmap_Type::Add, constant, m_defaultHardware);
+    return clone;
+}
+
+Bitmap Bitmap::operator- (const Bitmap& other)
+{
+    Bitmap clone = Clone();
+    clone.MakeBitmap(Bitmap_Type::Subtract, other, m_defaultHardware);
+    return clone;
+}
+
+Bitmap Bitmap::operator- (int constant)
+{
+    Bitmap clone = Clone();
+    clone.MakeBitmap(Bitmap_Type::Subtract, constant, m_defaultHardware);
+    return clone;
+}
+
+
+
+/**
+* Bitmap Generator
+*/
 // Generates Bitmap with a specified generation
 // Returns the filepath of the generated Bitmap
-const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName,
-                                     Processor_Type hardware)
+void Bitmap::MakeBitmap(Bitmap_Type gen, Processor_Type hardware)
 {
     // Reset performance
     SetPerformanceInformation();
@@ -157,99 +176,79 @@ const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName,
     // Generates map depending on the Bitmap_Type
     switch (gen)
     {
-        case Bitmap_Type::Static    : GenerateStatic(hardware);     break;
-        case Bitmap_Type::Random    : GenerateRandom(hardware);     break;
+        case Bitmap_Type::Static    : GenerateStatic(hardware);     return;
+        case Bitmap_Type::Random    : GenerateRandom(hardware);     return;
         default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Type");
     }
-
-    // Output color map to file output (.bmp file)
-    const std::string filePath("./bitmaps/" + fileName + ".bmp");
-    std::ofstream file = CreateFile(filePath, fileName);
-
-    // Write to opened file
-    if (!m_track_performance)
-        WriteData(file);
-    else
-        WriteData(file, m_performance.performanceArray);
-
-    // Clean-up
-    file.close();
-
-    return filePath;
 }
 
 // Takes another bitmap and modifies it with
 // this bitmap in various ways
 // Returns the filepath of the generated Bitmap
-const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName, const Bitmap& other,
-                                     Processor_Type hardware)
+void Bitmap::MakeBitmap(Bitmap_Type gen, const Bitmap& other,
+                        Processor_Type hardware)
 {
     // Reset performance
     SetPerformanceInformation();
 
     switch (gen)
     {
-        case Bitmap_Type::Add       : GenerateAdd(hardware, other);         break;
-        case Bitmap_Type::Subtract  : GenerateSubtract(hardware, other);    break;
-        case Bitmap_Type::Multiply  : GenerateMultiply();                   break;
-        case Bitmap_Type::Divide    : GenerateDivide();                     break;
-        case Bitmap_Type::MatrixMult: GenerateMatrixMult(hardware, other);  break;
+        case Bitmap_Type::Add       : GenerateAdd(hardware, other);         return;
+        case Bitmap_Type::Subtract  : GenerateSubtract(hardware, other);    return;
+        case Bitmap_Type::Multiply  : GenerateMultiply();                   return;
+        case Bitmap_Type::Divide    : GenerateDivide();                     return;
+        case Bitmap_Type::MatrixMult: GenerateMatrixMult(hardware, other);  return;
         default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Type");
     }
-
-    // Output color map to file output (.bmp file)
-    const std::string filePath("./bitmaps/" + fileName + ".bmp");
-    std::ofstream file = CreateFile(filePath, fileName);
-
-    // Write to opened file
-    if (!m_track_performance)
-        WriteData(file);
-    else
-        WriteData(file, m_performance.performanceArray);
-
-    // Clean-up
-    file.close();
-
-    return filePath;
 }
 
-const std::string Bitmap::MakeBitmap(Bitmap_Type gen, std::string fileName, int constant,
-                                     Processor_Type hardware)
+void Bitmap::MakeBitmap(Bitmap_Type gen, int constant,
+                        Processor_Type hardware)
 {
     // Reset performance
     SetPerformanceInformation();
 
     switch (gen)
     {
-        case Bitmap_Type::Add       : GenerateAdd(hardware, constant);      break;
-        case Bitmap_Type::Subtract  : GenerateSubtract(hardware, Bitmap()); break;
-        case Bitmap_Type::Multiply  : GenerateMultiply();                   break;
-        case Bitmap_Type::Divide    : GenerateDivide();                     break;
+        case Bitmap_Type::Add       : GenerateAdd(hardware, constant);      return;
+        case Bitmap_Type::Subtract  : GenerateSubtract(hardware, constant); return;
+        case Bitmap_Type::Multiply  : GenerateMultiply();                   return;
+        case Bitmap_Type::Divide    : GenerateDivide();                     return;
         default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Type");
     }
-
-    // Output color map to file output (.bmp file)
-    const std::string filePath("./bitmaps/" + fileName + ".bmp");
-    std::ofstream file = CreateFile(filePath, fileName);
-
-    // Write to opened file
-    if (!m_track_performance)
-        WriteData(file);
-    else
-        WriteData(file, m_performance.performanceArray);
-
-    // Clean-up
-    file.close();
-
-    return filePath;
 }
 
 /**
  * Public Methods
  */
+std::string Bitmap::DrawBitmap(std::string fileName)
+{
+    // Output color map to file output (.bmp file)
+    const std::string filePath("./bitmaps/" + fileName + ".bmp");
+    std::ofstream file = CreateFile(filePath, fileName);
+
+    // Write to opened file
+    if (!m_track_performance)
+        WriteData(file);
+    else
+        WriteData(file, m_performance.performanceArray);
+
+    // Clean-up
+    file.close();
+
+    return filePath;
+}
+
 const int Bitmap::Width() noexcept { return m_bmpInfo.biWidth; }
 const int Bitmap::Height() noexcept { return m_bmpInfo.biHeight; }
 
+// Set default hardware
+void Bitmap::SetDefaultHardware(const Processor_Type hardware) noexcept
+{
+    m_defaultHardware = hardware;
+}
+
+// Performance timings
 const double& Bitmap::Performance(Bitmap_Performance::GPU timeType) noexcept
 {
     switch(timeType)
@@ -360,7 +359,7 @@ void Bitmap::GenerateAdd(Processor_Type hardware, int constant)
     // anything, and I highly doubt I need this.
     if (constant < 0)
     {
-        //GenerateSubtract(hardware, -constant);
+        GenerateSubtract(hardware, -constant);
         return;
     }
 
@@ -392,6 +391,35 @@ void Bitmap::GenerateSubtract(Processor_Type hardware, const Bitmap& other)
         resultant = Kernel::Subtract(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
                                      other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biHeight,
                                      m_performance.performanceArray);
+
+    DeleteColorMap();
+    SetBitmapInformation(m_bmpInfo.biWidth, m_bmpInfo.biHeight);
+    m_color = resultant;
+}
+
+void Bitmap::GenerateSubtract(Processor_Type hardware, int constant)
+{
+    if (!m_color)
+        throw BitmapException("[ADDITION] This object's bitmap is missing (nullptr)");
+
+    // If you try to add with a negative number, GenerateSubtract
+    // will be called instead, with the positive variant of the
+    // constant number. This is more of a safety catch than
+    // anything, and I highly doubt I need this.
+    if (constant < 0)
+    {
+        GenerateAdd(hardware, -constant);
+        return;
+    }
+
+    RGBQUAD** resultant = nullptr;
+
+    if (!m_track_performance)
+        resultant = Kernel::Subtract(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     constant);
+    else
+        resultant = Kernel::Subtract(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     constant, m_performance.performanceArray);
 
     DeleteColorMap();
     SetBitmapInformation(m_bmpInfo.biWidth, m_bmpInfo.biHeight);
@@ -579,8 +607,18 @@ RGBQUAD** Bitmap::CopyColorMap(RGBQUAD** map, int width, int height)
     return newMap;
 }
 
+Bitmap Bitmap::Clone()
+{
+    Bitmap clone(m_bmpInfo.biWidth, m_bmpInfo.biHeight, m_track_performance);
+    clone.m_color = CopyColorMap(m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight);
+    return clone;
+}
+
 void Bitmap::DeleteColorMap()
 {
+    if (!m_color)
+        return;
+
     // Deallocate the columns
     for (int i = 0; i < m_bmpInfo.biWidth; ++i)
     {

@@ -28,6 +28,10 @@ namespace Kernel
                        const RGBQUAD* const* other, int otherWidth, int otherHeight);
     RGBQUAD** Subtract(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                        const RGBQUAD* const* other, int otherWidth, int otherHeight, double performance[]);
+    RGBQUAD** Subtract(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant);
+    RGBQUAD** Subtract(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant, double performance[]);
     // Matrix Multiplication Variants
     RGBQUAD** MatrixMult(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                          const RGBQUAD* const* other, int otherWidth, int otherHeight);
@@ -63,6 +67,8 @@ namespace
     // Subtraction
     RGBQUAD** CPUSubtract(const RGBQUAD* const* colorMap, int width, int height,
                           const RGBQUAD* const* other, int otherWidth, int otherHeight);
+    RGBQUAD** CPUSubtract(const RGBQUAD* const* colorMap, int width, int height,
+                          int constant);
     // Matrix Multiplication
     RGBQUAD** CPUMatrixMult(const RGBQUAD* const* colorMap, int width, int height,
                             const RGBQUAD* const* other, int otherWidth, int otherHeight);

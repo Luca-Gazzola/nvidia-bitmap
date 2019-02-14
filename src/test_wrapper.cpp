@@ -301,7 +301,26 @@ int main(int argc, char** argv)
      */
     std::string location;
 
-
+    Bitmap first(1920, 1080, have_perf);
+    Bitmap second(1920, 1080, have_perf);
+    first.MakeBitmap(BitmapTypeRandom);
+    second.MakeBitmap(BitmapTypeRandom);
+    Bitmap third = first + second;
+    Bitmap fourth = third + 50;
+    Bitmap fifth = fourth - 50;
+    std::cout << "Creating Bitmap: " << third.Width() << "x" << third.Height() << std::endl;
+    location = third.DrawBitmap("third");
+    test_LogPerformance(third);
+    std::cout << "Saved at " << location << std::endl << std::endl;
+    std::cout << "Creating Bitmap: " << fourth.Width() << "x" << fourth.Height() << std::endl;
+    location = fourth.DrawBitmap("fourth");
+    test_LogPerformance(fourth);
+    std::cout << "Saved at " << location << std::endl << std::endl;
+    std::cout << "Creating Bitmap: " << fifth.Width() << "x" << fifth.Height() << std::endl;
+    location = fifth.DrawBitmap("fifth");
+    test_LogPerformance(fifth);
+    std::cout << "Saved at " << location << std::endl << std::endl;
+/*
     Bitmap first(1920, 1080, have_perf);
     Bitmap second(1920, 1080, have_perf);
     first.MakeBitmap(bitmap_gen_type, "first");
@@ -312,7 +331,7 @@ int main(int argc, char** argv)
     location = first.MakeBitmap(BitmapTypeAdd, "matrixAdd", 100, bitmap_hardware);
     test_LogPerformance(first);
     std::cout << "Saved at " << location << std::endl << std::endl;
-
+*/
 /*
     Bitmap test_write(have_perf);
     std::cout << "Creating Bitmap: " << test_write.Width() << "x" << test_write.Height() << std::endl;
@@ -360,20 +379,24 @@ int main(int argc, char** argv)
 
                 Bitmap test_writeLeft(have_perf);
                 Bitmap test_writeRight(have_perf);
-                test_writeLeft.MakeBitmap(secondary_gen, "test_matrixMultStatic", bitmap_hardware);
-                test_writeRight.MakeBitmap(secondary_gen, "test_matrixMultStatic", bitmap_hardware);
-                test_writeLeft.MakeBitmap(bitmap_gen_type, "test_matrixMultStatic",
-                                          test_writeRight, bitmap_hardware);
+                test_writeLeft.MakeBitmap(secondary_gen, bitmap_hardware);
+                test_writeRight.MakeBitmap(secondary_gen, bitmap_hardware);
+                test_writeLeft.MakeBitmap(bitmap_gen_type, test_writeRight, bitmap_hardware);
+                test_writeLeft.DrawBitmap("writeLeft");
+                test_writeRight.DrawBitmap("writeRight");
+                test_writeLeft.DrawBitmap("writeResult");
                 test_LogPerformanceToFile(test_writeLeft, file);
                 test_writeLeft.~Bitmap();
                 test_writeRight.~Bitmap();
 
                 Bitmap test_write2Left(1920, 1080, have_perf);
                 Bitmap test_write2Right(1080, 1920, have_perf);
-                test_write2Left.MakeBitmap(secondary_gen, "test_matrixMultStaticHD", bitmap_hardware);
-                test_write2Right.MakeBitmap(secondary_gen, "test_matrixMultStaticHD", bitmap_hardware);
-                test_write2Left.MakeBitmap(bitmap_gen_type, "test_matrixMultStaticHD",
-                                           test_write2Right, bitmap_hardware);
+                test_write2Left.MakeBitmap(secondary_gen, bitmap_hardware);
+                test_write2Right.MakeBitmap(secondary_gen, bitmap_hardware);
+                test_write2Left.MakeBitmap(bitmap_gen_type, test_write2Right, bitmap_hardware);
+                test_write2Left.DrawBitmap("writeLeftHD");
+                test_write2Right.DrawBitmap("writeRightHD");
+                test_write2Left.DrawBitmap("writeResultHD");
                 test_LogPerformanceToFile(test_write2Left, file2);
                 test_write2Left.~Bitmap();
                 test_write2Right.~Bitmap();
@@ -388,18 +411,22 @@ int main(int argc, char** argv)
 
                 Bitmap test_writeLeft(have_perf);
                 Bitmap test_writeRight(have_perf);
-                test_writeLeft.MakeBitmap(secondary_gen, "test_addRandom", bitmap_hardware);
-                test_writeRight.MakeBitmap(secondary_gen, "test_addRandom", bitmap_hardware);
-                test_writeLeft.MakeBitmap(bitmap_gen_type, "test_addRandom",
-                                          test_writeRight, bitmap_hardware);
+                test_writeLeft.MakeBitmap(secondary_gen, bitmap_hardware);
+                test_writeRight.MakeBitmap(secondary_gen, bitmap_hardware);
+                test_writeLeft.MakeBitmap(bitmap_gen_type, test_writeRight, bitmap_hardware);
+                test_writeLeft.DrawBitmap("writeLeft");
+                test_writeRight.DrawBitmap("writeRight");
+                test_writeLeft.DrawBitmap("writeResult");
                 test_LogPerformanceToFile(test_writeLeft, file);
 
                 Bitmap test_write2Left(1920, 1080, have_perf);
                 Bitmap test_write2Right(1920, 1080, have_perf);
-                test_write2Left.MakeBitmap(secondary_gen, "test_addRandomHD", bitmap_hardware);
-                test_write2Right.MakeBitmap(secondary_gen, "test_addRandomHD", bitmap_hardware);
-                test_write2Left.MakeBitmap(bitmap_gen_type, "test_addRandomHD",
-                                           test_write2Right, bitmap_hardware);
+                test_write2Left.MakeBitmap(secondary_gen, bitmap_hardware);
+                test_write2Right.MakeBitmap(secondary_gen, bitmap_hardware);
+                test_write2Left.MakeBitmap(bitmap_gen_type, test_write2Right, bitmap_hardware);
+                test_writeLeft.DrawBitmap("writeLeftHD");
+                test_writeRight.DrawBitmap("writeRightHD");
+                test_writeLeft.DrawBitmap("writeResultHD");
                 test_LogPerformanceToFile(test_write2Left, file2);
             }
         }
@@ -410,11 +437,13 @@ int main(int argc, char** argv)
                 std::cout << "Iteration:\t" << i << std::endl;
 
                 Bitmap test_write(have_perf);
-                test_write.MakeBitmap(bitmap_gen_type, "test_write", bitmap_hardware);
+                test_write.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_write.DrawBitmap("test_write");
                 test_LogPerformanceToFile(test_write, file);
 
                 Bitmap test_write2(1920, 1080, have_perf);
-                test_write2.MakeBitmap(bitmap_gen_type, "test_write2", bitmap_hardware);
+                test_write2.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_write2.DrawBitmap("test_write2");
                 test_LogPerformanceToFile(test_write2, file2);
             }
         }
