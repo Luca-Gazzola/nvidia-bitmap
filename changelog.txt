@@ -1,5 +1,15 @@
 Changelog
 =========
+15.02.2019 - 1.08
+Happy Birthday to me. And I'm here again, working at the lab. I really don't have
+anything to do I guess. I've added point-wise multiplication and division in
+non-performant and performant tracking variants. I have discovered an issue with
+my copy constructor that I will need to fix, but that's for another time. For the
+time being, the modifications that I've wanted to add are now fully implemented.
+From this point, it's about fixing what I can then seeing if I want to continue.
+I've also modified my bitmap_resources so that it is more clear about what names
+belong to what namespaces.
+
 14.02.2019 - 1.07a
 Only really important to the repository itself. I just removed several files and
 directories due to their unimportance. They are just there due to a full upload

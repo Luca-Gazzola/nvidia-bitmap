@@ -14,7 +14,7 @@ implementations under the hood. I designed the Bitmap with what I was learning o
 wanting to learn, not for the actual practical use of it.
 
 ## Changes
-Latest Version: 1.07a
+Latest Version: 1.08
 
 Please view the changelog for updates. Yeah I should combine them but I don't wanna.
 
