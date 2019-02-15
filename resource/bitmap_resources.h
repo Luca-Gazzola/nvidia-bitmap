@@ -58,8 +58,14 @@ enum class Processor_Type : int
 
 enum class Bitmap_Type : int
 {
-    Static,
-    Random,
+    Static,     // Black and white static
+    Random,     // Color static
+    Solid,      // One flat color
+    Image       // An image map
+};
+
+enum class Bitmap_Modify_Type : int
+{
     Add,
     Subtract,
     Multiply,
@@ -112,11 +118,14 @@ struct Bitmap_Performance
 // Bitmap Type
 #define BitmapTypeStatic            Bitmap_Type::Static
 #define BitmapTypeRandom            Bitmap_Type::Random
-#define BitmapTypeAdd               Bitmap_Type::Add
-#define BitmapTypeSubtract          Bitmap_Type::Subtract
-#define BitmapTypeMultiply          Bitmap_Type::Multiply
-#define BitmapTypeDivide            Bitmap_Type::Divide
-#define BitmapTypeMatrixMult        Bitmap_Type::MatrixMult
+#define BitmapTypeSolid             Bitmap_Type::Solid
+#define BitmapTypeImage             Bitmap_Type::Image
+// Bitmap Modify Type
+#define BitmapModifyTypeAdd         Bitmap_Modify_Type::Add
+#define BitmapModifyTypeSubtract    Bitmap_Modify_Type::Subtract
+#define BitmapModifyTypeMultiply    Bitmap_Modify_Type::Multiply
+#define BitmapModifyTypeDivide      Bitmap_Modify_Type::Divide
+#define BitmapModifyTypeMatrixMult  Bitmap_Modify_Type::MatrixMult
 // Bitmap Performance
 #define BitmapPerfGPUKernelInit     Bitmap_Performance::GPU::KernelInit
 #define BitmapPerfGPUKernelLaunch   Bitmap_Performance::GPU::KernelLaunch
