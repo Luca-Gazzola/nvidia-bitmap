@@ -32,6 +32,24 @@ namespace Kernel
                        int constant);
     RGBQUAD** Subtract(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                        int constant, double performance[]);
+    // Point-wise Multiplication Variants
+    RGBQUAD** Multiply(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       const RGBQUAD* const* other, int otherWidth, int otherHeight);
+    RGBQUAD** Multiply(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       const RGBQUAD* const* other, int otherWidth, int otherHeight, double performance[]);
+    RGBQUAD** Multiply(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant);
+    RGBQUAD** Multiply(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant, double performance[]);
+    // Point-wise Division Variants
+    RGBQUAD** Division(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       const RGBQUAD* const* other, int otherWidth, int otherHeight);
+    RGBQUAD** Division(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       const RGBQUAD* const* other, int otherWidth, int otherHeight, double performance[]);
+    RGBQUAD** Division(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant);
+    RGBQUAD** Division(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
+                       int constant, double performance[]);
     // Matrix Multiplication Variants
     RGBQUAD** MatrixMult(Processor_Type hardware, const RGBQUAD* const* colorMap, int width, int height,
                          const RGBQUAD* const* other, int otherWidth, int otherHeight);
@@ -61,13 +79,23 @@ namespace
     // CPU Modifications
     // Addition
     RGBQUAD** CPUAddition(const RGBQUAD* const* colorMap, int width, int height,
-                          const RGBQUAD* const* other, int otherWidth, int otherHeight);
+                          const RGBQUAD* const* other);
     RGBQUAD** CPUAddition(const RGBQUAD* const* colorMap, int width, int height,
                           int constant);
     // Subtraction
     RGBQUAD** CPUSubtract(const RGBQUAD* const* colorMap, int width, int height,
-                          const RGBQUAD* const* other, int otherWidth, int otherHeight);
+                          const RGBQUAD* const* other);
     RGBQUAD** CPUSubtract(const RGBQUAD* const* colorMap, int width, int height,
+                          int constant);
+    // Point-wise Multiplication
+    RGBQUAD** CPUMultiply(const RGBQUAD* const* colorMap, int width, int height,
+                          const RGBQUAD* const* other);
+    RGBQUAD** CPUMultiply(const RGBQUAD* const* colorMap, int width, int height,
+                          int constant);
+    // Point-wise Division
+    RGBQUAD** CPUDivision(const RGBQUAD* const* colorMap, int width, int height,
+                          const RGBQUAD* const* other);
+    RGBQUAD** CPUDivision(const RGBQUAD* const* colorMap, int width, int height,
                           int constant);
     // Matrix Multiplication
     RGBQUAD** CPUMatrixMult(const RGBQUAD* const* colorMap, int width, int height,

@@ -648,7 +648,7 @@ __host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
     // Kernel call
     __Addition<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
             d_colorMap, d_colorPitch, width, height,
-            d_otherMap, d_otherPitch, otherWidth, otherHeight);
+            d_otherMap, d_otherPitch);
     CUDA_KERNEL_CALL();
     CUDA_CALL( cudaDeviceSynchronize() );
 
@@ -710,7 +710,7 @@ __host__ uchar4* LaunchAddition(uchar4* colorMap, int width, int height,
     // Kernel call
     __Addition<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
                                             d_colorMap, d_colorPitch, width, height,
-                                            d_otherMap, d_otherPitch, otherWidth, otherHeight);
+                                            d_otherMap, d_otherPitch);
     CUDA_KERNEL_CALL();
     CUDA_CALL( cudaDeviceSynchronize() );
     // Timer end
@@ -901,7 +901,7 @@ __host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
     // Kernel call
     __Subtract<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
             d_colorMap, d_colorPitch, width, height,
-            d_otherMap, d_otherPitch, otherWidth, otherHeight);
+            d_otherMap, d_otherPitch);
     CUDA_KERNEL_CALL();
     CUDA_CALL( cudaDeviceSynchronize() );
 
@@ -963,7 +963,7 @@ __host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
     // Kernel call
     __Subtract<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
             d_colorMap, d_colorPitch, width, height,
-            d_otherMap, d_otherPitch, otherWidth, otherHeight);
+            d_otherMap, d_otherPitch);
     CUDA_KERNEL_CALL();
     CUDA_CALL( cudaDeviceSynchronize() );
     // Timer end
@@ -1081,6 +1081,510 @@ __host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
     CUDA_CALL( cudaEventRecord(kernel_start, 0) );
     // Kernel call
     __Subtract<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
+            d_colorMap, d_colorPitch, width, height,
+            constant);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(kernel_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(kernel_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&kernel_time, kernel_start, kernel_stop) );
+    performance[1] = kernel_time;
+
+    // Timer start
+    cudaEvent_t copy_start, copy_stop;
+    float copy_time;
+    CUDA_CALL( cudaEventCreate(&copy_start) );
+    CUDA_CALL( cudaEventCreate(&copy_stop) );
+    CUDA_CALL( cudaEventRecord(copy_start, 0) );
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, width*sizeof(uchar4), d_map, d_pitch,
+                            width*sizeof(uchar4), height, cudaMemcpyDeviceToHost) );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(copy_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(copy_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&copy_time, copy_start, copy_stop) );
+    performance[2] = copy_time;
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaFree(d_colorMap) );
+
+    // CUDA Exit
+    return map;
+}
+
+// Point-wise Multiply
+__host__ uchar4* LaunchMultiply(uchar4* colorMap, int width, int height,
+                                uchar4* otherMap, int otherWidth, int otherHeight)
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*width*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(width, height);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
+
+    // CUDA Allocation for maps
+    uchar4* d_colorMap;
+    uchar4* d_otherMap;
+    size_t d_colorPitch;
+    size_t d_otherPitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_colorMap, &d_colorPitch,
+                                width*sizeof(uchar4), height ) );
+    CUDA_CALL( cudaMallocPitch( (void **)&d_otherMap, &d_otherPitch,
+                                otherWidth*sizeof(uchar4), otherHeight ) );
+
+    // Copy maps into device
+    CUDA_CALL( cudaMemcpy2D(d_colorMap, d_colorPitch, colorMap, width*sizeof(uchar4),
+                            width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+    CUDA_CALL( cudaMemcpy2D(d_otherMap, d_otherPitch, otherMap, otherWidth*sizeof(uchar4),
+                            otherWidth*sizeof(uchar4), otherHeight, cudaMemcpyHostToDevice) );
+
+    // Kernel call
+    __Multiply<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
+            d_colorMap, d_colorPitch, width, height,
+            d_otherMap, d_otherPitch);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, width*sizeof(uchar4), d_map, d_pitch,
+                            width*sizeof(uchar4), height, cudaMemcpyDeviceToHost) );
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaFree(d_colorMap) );
+    CUDA_CALL( cudaFree(d_otherMap) );
+
+    // CUDA Exit
+    return map;
+}
+
+__host__ uchar4* LaunchMultiply(uchar4* colorMap, int width, int height,
+                                uchar4* otherMap, int otherWidth, int otherHeight,
+                                double performance[])
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*width*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(width, height);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
+
+    // CUDA Allocation for maps
+    uchar4* d_colorMap;
+    uchar4* d_otherMap;
+    size_t d_colorPitch;
+    size_t d_otherPitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_colorMap, &d_colorPitch,
+                                width*sizeof(uchar4), height ) );
+    CUDA_CALL( cudaMallocPitch( (void **)&d_otherMap, &d_otherPitch,
+                                otherWidth*sizeof(uchar4), otherHeight ) );
+
+    // Copy maps into device
+    CUDA_CALL( cudaMemcpy2D(d_colorMap, d_colorPitch, colorMap, width*sizeof(uchar4),
+                            width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+    CUDA_CALL( cudaMemcpy2D(d_otherMap, d_otherPitch, otherMap, otherWidth*sizeof(uchar4),
+                            otherWidth*sizeof(uchar4), otherHeight, cudaMemcpyHostToDevice) );
+
+    // Timer start
+    cudaEvent_t kernel_start, kernel_stop;
+    float kernel_time;
+    CUDA_CALL( cudaEventCreate(&kernel_start) );
+    CUDA_CALL( cudaEventCreate(&kernel_stop) );
+    CUDA_CALL( cudaEventRecord(kernel_start, 0) );
+    // Kernel call
+    __Multiply<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
+            d_colorMap, d_colorPitch, width, height,
+            d_otherMap, d_otherPitch);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(kernel_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(kernel_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&kernel_time, kernel_start, kernel_stop) );
+    performance[1] = kernel_time;
+
+    // Timer start
+    cudaEvent_t copy_start, copy_stop;
+    float copy_time;
+    CUDA_CALL( cudaEventCreate(&copy_start) );
+    CUDA_CALL( cudaEventCreate(&copy_stop) );
+    CUDA_CALL( cudaEventRecord(copy_start, 0) );
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, width*sizeof(uchar4), d_map, d_pitch,
+                            width*sizeof(uchar4), height, cudaMemcpyDeviceToHost) );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(copy_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(copy_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&copy_time, copy_start, copy_stop) );
+    performance[2] = copy_time;
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaFree(d_colorMap) );
+    CUDA_CALL( cudaFree(d_otherMap) );
+
+    // CUDA Exit
+    return map;
+}
+
+__host__ uchar4* LaunchMultiply(uchar4* colorMap, int width, int height,
+                                int constant)
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*width*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(width, height);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
+
+    // CUDA Allocation for maps
+    uchar4* d_colorMap;
+    size_t d_colorPitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_colorMap, &d_colorPitch,
+                                width*sizeof(uchar4), height ) );
+
+    // Copy maps into device
+    CUDA_CALL( cudaMemcpy2D(d_colorMap, d_colorPitch, colorMap, width*sizeof(uchar4),
+                            width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+
+    // Kernel call
+    __Multiply<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
+            d_colorMap, d_colorPitch, width, height,
+            constant);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, width*sizeof(uchar4), d_map, d_pitch,
+                            width*sizeof(uchar4), height, cudaMemcpyDeviceToHost) );
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaFree(d_colorMap) );
+
+    // CUDA Exit
+    return map;
+}
+
+__host__ uchar4* LaunchMultiply(uchar4* colorMap, int width, int height,
+                                int constant, double performance[])
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*width*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(width, height);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
+
+    // CUDA Allocation for maps
+    uchar4* d_colorMap;
+    size_t d_colorPitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_colorMap, &d_colorPitch,
+                                width*sizeof(uchar4), height ) );
+
+    // Copy maps into device
+    CUDA_CALL( cudaMemcpy2D(d_colorMap, d_colorPitch, colorMap, width*sizeof(uchar4),
+                            width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+
+    // Timer start
+    cudaEvent_t kernel_start, kernel_stop;
+    float kernel_time;
+    CUDA_CALL( cudaEventCreate(&kernel_start) );
+    CUDA_CALL( cudaEventCreate(&kernel_stop) );
+    CUDA_CALL( cudaEventRecord(kernel_start, 0) );
+    // Kernel call
+    __Multiply<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
+            d_colorMap, d_colorPitch, width, height,
+            constant);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(kernel_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(kernel_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&kernel_time, kernel_start, kernel_stop) );
+    performance[1] = kernel_time;
+
+    // Timer start
+    cudaEvent_t copy_start, copy_stop;
+    float copy_time;
+    CUDA_CALL( cudaEventCreate(&copy_start) );
+    CUDA_CALL( cudaEventCreate(&copy_stop) );
+    CUDA_CALL( cudaEventRecord(copy_start, 0) );
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, width*sizeof(uchar4), d_map, d_pitch,
+                            width*sizeof(uchar4), height, cudaMemcpyDeviceToHost) );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(copy_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(copy_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&copy_time, copy_start, copy_stop) );
+    performance[2] = copy_time;
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaFree(d_colorMap) );
+
+    // CUDA Exit
+    return map;
+}
+
+// Point-wise Division
+__host__ uchar4* LaunchDivision(uchar4* colorMap, int width, int height,
+                                uchar4* otherMap, int otherWidth, int otherHeight)
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*width*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(width, height);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
+
+    // CUDA Allocation for maps
+    uchar4* d_colorMap;
+    uchar4* d_otherMap;
+    size_t d_colorPitch;
+    size_t d_otherPitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_colorMap, &d_colorPitch,
+                                width*sizeof(uchar4), height ) );
+    CUDA_CALL( cudaMallocPitch( (void **)&d_otherMap, &d_otherPitch,
+                                otherWidth*sizeof(uchar4), otherHeight ) );
+
+    // Copy maps into device
+    CUDA_CALL( cudaMemcpy2D(d_colorMap, d_colorPitch, colorMap, width*sizeof(uchar4),
+                            width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+    CUDA_CALL( cudaMemcpy2D(d_otherMap, d_otherPitch, otherMap, otherWidth*sizeof(uchar4),
+                            otherWidth*sizeof(uchar4), otherHeight, cudaMemcpyHostToDevice) );
+
+    // Kernel call
+    __Division<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
+            d_colorMap, d_colorPitch, width, height,
+            d_otherMap, d_otherPitch);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, width*sizeof(uchar4), d_map, d_pitch,
+                            width*sizeof(uchar4), height, cudaMemcpyDeviceToHost) );
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaFree(d_colorMap) );
+    CUDA_CALL( cudaFree(d_otherMap) );
+
+    // CUDA Exit
+    return map;
+}
+
+__host__ uchar4* LaunchDivision(uchar4* colorMap, int width, int height,
+                                uchar4* otherMap, int otherWidth, int otherHeight,
+                                double performance[])
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*width*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(width, height);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
+
+    // CUDA Allocation for maps
+    uchar4* d_colorMap;
+    uchar4* d_otherMap;
+    size_t d_colorPitch;
+    size_t d_otherPitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_colorMap, &d_colorPitch,
+                                width*sizeof(uchar4), height ) );
+    CUDA_CALL( cudaMallocPitch( (void **)&d_otherMap, &d_otherPitch,
+                                otherWidth*sizeof(uchar4), otherHeight ) );
+
+    // Copy maps into device
+    CUDA_CALL( cudaMemcpy2D(d_colorMap, d_colorPitch, colorMap, width*sizeof(uchar4),
+                            width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+    CUDA_CALL( cudaMemcpy2D(d_otherMap, d_otherPitch, otherMap, otherWidth*sizeof(uchar4),
+                            otherWidth*sizeof(uchar4), otherHeight, cudaMemcpyHostToDevice) );
+
+    // Timer start
+    cudaEvent_t kernel_start, kernel_stop;
+    float kernel_time;
+    CUDA_CALL( cudaEventCreate(&kernel_start) );
+    CUDA_CALL( cudaEventCreate(&kernel_stop) );
+    CUDA_CALL( cudaEventRecord(kernel_start, 0) );
+    // Kernel call
+    __Division<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
+            d_colorMap, d_colorPitch, width, height,
+            d_otherMap, d_otherPitch);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(kernel_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(kernel_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&kernel_time, kernel_start, kernel_stop) );
+    performance[1] = kernel_time;
+
+    // Timer start
+    cudaEvent_t copy_start, copy_stop;
+    float copy_time;
+    CUDA_CALL( cudaEventCreate(&copy_start) );
+    CUDA_CALL( cudaEventCreate(&copy_stop) );
+    CUDA_CALL( cudaEventRecord(copy_start, 0) );
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, width*sizeof(uchar4), d_map, d_pitch,
+                            width*sizeof(uchar4), height, cudaMemcpyDeviceToHost) );
+    // Timer end
+    CUDA_CALL( cudaEventRecord(copy_stop, 0) );
+    CUDA_CALL( cudaEventSynchronize(copy_stop) );
+    CUDA_CALL( cudaEventElapsedTime(&copy_time, copy_start, copy_stop) );
+    performance[2] = copy_time;
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaFree(d_colorMap) );
+    CUDA_CALL( cudaFree(d_otherMap) );
+
+    // CUDA Exit
+    return map;
+}
+
+__host__ uchar4* LaunchDivision(uchar4* colorMap, int width, int height,
+                                int constant)
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*width*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(width, height);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
+
+    // CUDA Allocation for maps
+    uchar4* d_colorMap;
+    size_t d_colorPitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_colorMap, &d_colorPitch,
+                                width*sizeof(uchar4), height ) );
+
+    // Copy maps into device
+    CUDA_CALL( cudaMemcpy2D(d_colorMap, d_colorPitch, colorMap, width*sizeof(uchar4),
+                            width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+
+    // Kernel call
+    __Division<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
+            d_colorMap, d_colorPitch, width, height,
+            constant);
+    CUDA_KERNEL_CALL();
+    CUDA_CALL( cudaDeviceSynchronize() );
+
+    // Copy results back to host
+    CUDA_CALL( cudaMemcpy2D(map, width*sizeof(uchar4), d_map, d_pitch,
+                            width*sizeof(uchar4), height, cudaMemcpyDeviceToHost) );
+
+    // CUDA Deallocation
+    CUDA_CALL( cudaFree(d_map) );
+    CUDA_CALL( cudaFree(d_colorMap) );
+
+    // CUDA Exit
+    return map;
+}
+
+__host__ uchar4* LaunchDivision(uchar4* colorMap, int width, int height,
+                                int constant, double performance[])
+{
+    // Host Allocation for the container holding the 3 color flattened arrays
+    // The resultant matrix using the height and otherWidth because
+    // height = x of resultant && otherWidth = y of resultant
+    uchar4* map = (uchar4*)malloc(height*width*sizeof(uchar4));
+
+    // CUDA Allocation per color channel
+    uchar4* d_map;
+    size_t d_pitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_map, &d_pitch, width*sizeof(uchar4), height ) );
+
+    // Thread setup
+    dim3 threadsPerBlock(1,1);
+    dim3 blocks(1,1);
+    int threadCount = DetermineThreads(width, height);
+    SetupKernelThreadParams(&threadsPerBlock, &blocks, threadCount, width, height);
+
+    // CUDA Allocation for maps
+    uchar4* d_colorMap;
+    size_t d_colorPitch;
+    CUDA_CALL( cudaMallocPitch( (void **)&d_colorMap, &d_colorPitch,
+                                width*sizeof(uchar4), height ) );
+
+    // Copy maps into device
+    CUDA_CALL( cudaMemcpy2D(d_colorMap, d_colorPitch, colorMap, width*sizeof(uchar4),
+                            width*sizeof(uchar4), height, cudaMemcpyHostToDevice) );
+
+    // Timer start
+    cudaEvent_t kernel_start, kernel_stop;
+    float kernel_time;
+    CUDA_CALL( cudaEventCreate(&kernel_start) );
+    CUDA_CALL( cudaEventCreate(&kernel_stop) );
+    CUDA_CALL( cudaEventRecord(kernel_start, 0) );
+    // Kernel call
+    __Division<<<blocks, threadsPerBlock>>>(d_map, d_pitch,
             d_colorMap, d_colorPitch, width, height,
             constant);
     CUDA_KERNEL_CALL();
@@ -1364,7 +1868,7 @@ __global__ static void __RandomGeneration(int width, int height,
 
 __global__ static void __Addition(uchar4* map, int pitch,
                                   uchar4* colorMap, int colorPitch, int width, int height,
-                                  uchar4* otherMap, int otherPitch, int otherWidth, int otherHeight)
+                                  uchar4* otherMap, int otherPitch)
 {
     // Find x and y coordinates
     const int idy = blockIdx.y * blockDim.y + threadIdx.y;
@@ -1429,7 +1933,7 @@ __global__ static void __Addition(uchar4* map, int pitch,
 
 __global__ static void __Subtract(uchar4* map, int pitch,
                                   uchar4* colorMap, int colorPitch, int width, int height,
-                                  uchar4* otherMap, int otherPitch, int otherWidth, int otherHeight)
+                                  uchar4* otherMap, int otherPitch)
 {
     // Find x and y coordinates
     const int idy = blockIdx.y * blockDim.y + threadIdx.y;
@@ -1488,6 +1992,142 @@ __global__ static void __Subtract(uchar4* map, int pitch,
             current[col + i].x = (tempR > 0) ? (unsigned char)tempR : (unsigned char)0;
             current[col + i].y = (tempG > 0) ? (unsigned char)tempG : (unsigned char)0;
             current[col + i].z = (tempB > 0) ? (unsigned char)tempB : (unsigned char)0;
+        }
+    }
+}
+
+// Multiply Kernel
+__global__ static void __Multiply(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  uchar4* otherMap, int otherPitch)
+{
+    // Find x and y coordinates
+    const int idy = blockIdx.y * blockDim.y + threadIdx.y;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int col = 4 * idx;
+
+    // Retrieve matrix position
+    uchar4* current = (uchar4*)((char*)map + idy * pitch);
+
+    if (idy < height && col < width)
+    {
+        int max = (width - col < 4) ? width - col : 4;
+
+        #pragma unroll
+        for (int i = 0; i < max; ++i)
+        {
+            uchar4 currentCM = *((uchar4*)((char*)colorMap + idy * colorPitch) + col + i);
+            uchar4 currentOM = *((uchar4*)((char*)otherMap + idy * otherPitch) + col + i);
+
+            int tempR = (int)currentCM.x * (int)currentOM.x;
+            int tempG = (int)currentCM.y * (int)currentOM.y;
+            int tempB = (int)currentCM.z * (int)currentOM.z;
+
+            current[col + i].x = (tempR < 255) ? (unsigned char)tempR : (unsigned char)255;
+            current[col + i].y = (tempG < 255) ? (unsigned char)tempG : (unsigned char)255;
+            current[col + i].z = (tempB < 255) ? (unsigned char)tempB : (unsigned char)255;
+        }
+    }
+}
+
+__global__ static void __Multiply(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  int constant)
+{
+    // Find x and y coordinates
+    const int idy = blockIdx.y * blockDim.y + threadIdx.y;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int col = 4 * idx;
+
+    // Retrieve matrix position
+    uchar4* current = (uchar4*)((char*)map + idy * pitch);
+
+    if (idy < height && col < width)
+    {
+        int max = (width - col < 4) ? width - col : 4;
+
+        #pragma unroll
+        for (int i = 0; i < max; ++i)
+        {
+            uchar4 currentCM = *((uchar4*)((char*)colorMap + idy * colorPitch) + col + i);
+
+            int tempR = (int)currentCM.x * constant;
+            int tempG = (int)currentCM.y * constant;
+            int tempB = (int)currentCM.z * constant;
+
+            current[col + i].x = (tempR < 255) ? (unsigned char)tempR : (unsigned char)255;
+            current[col + i].y = (tempG < 255) ? (unsigned char)tempG : (unsigned char)255;
+            current[col + i].z = (tempB < 255) ? (unsigned char)tempB : (unsigned char)255;
+        }
+    }
+}
+
+__global__ static void __Division(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  uchar4* otherMap, int otherPitch)
+{
+    // Find x and y coordinates
+    const int idy = blockIdx.y * blockDim.y + threadIdx.y;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int col = 4 * idx;
+
+    // Retrieve matrix position
+    uchar4* current = (uchar4*)((char*)map + idy * pitch);
+
+    if (idy < height && col < width)
+    {
+        int max = (width - col < 4) ? width - col : 4;
+
+        #pragma unroll
+        for (int i = 0; i < max; ++i)
+        {
+            uchar4 currentCM = *((uchar4*)((char*)colorMap + idy * colorPitch) + col + i);
+            uchar4 currentOM = *((uchar4*)((char*)otherMap + idy * otherPitch) + col + i);
+
+            int tempR = ((int)currentOM.x) ? (int)currentCM.x / (int)currentOM.x : 0;
+            int tempG = ((int)currentOM.y) ? (int)currentCM.y / (int)currentOM.y : 0;
+            int tempB = ((int)currentOM.z) ? (int)currentCM.z / (int)currentOM.z : 0;
+
+            current[col + i].x = (unsigned char)tempR;
+            current[col + i].y = (unsigned char)tempG;
+            current[col + i].z = (unsigned char)tempB;
+        }
+    }
+}
+
+__global__ static void __Division(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  int constant)
+{
+    // Find x and y coordinates
+    const int idy = blockIdx.y * blockDim.y + threadIdx.y;
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int col = 4 * idx;
+
+    // Retrieve matrix position
+    uchar4* current = (uchar4*)((char*)map + idy * pitch);
+
+    if (idy < height && col < width)
+    {
+        int max = (width - col < 4) ? width - col : 4;
+
+        #pragma unroll
+        for (int i = 0; i < max; ++i)
+        {
+            uchar4 currentCM = *((uchar4*)((char*)colorMap + idy * colorPitch) + col + i);
+
+            // The kernel will fail if any constant value is 0, which will cause
+            // an exception since I can't call it manually
+            int tempR = (int)currentCM.x / constant;
+            int tempG = (int)currentCM.y / constant;
+            int tempB = (int)currentCM.z / constant;
+
+            current[col + i].x = (tempR < 0) ? (unsigned char)(255 + tempR)
+                                             : (unsigned char)tempR;
+            current[col + i].y = (tempG < 0) ? (unsigned char)(255 + tempG)
+                                             : (unsigned char)tempG;
+            current[col + i].z = (tempB < 0) ? (unsigned char)(255 + tempB)
+                                             : (unsigned char)tempB;
         }
     }
 }

@@ -29,20 +29,24 @@ public:
     /**
      * Operator Overloads
      */
-     void operator= (const Bitmap& other);
-     Bitmap operator+ (const Bitmap& other);
-     Bitmap operator+ (int constant);
-     Bitmap operator- (const Bitmap& other);
-     Bitmap operator- (int constant);
+    void operator= (const Bitmap& other);
+    Bitmap operator+ (const Bitmap& other);
+    Bitmap operator+ (int constant);
+    Bitmap operator- (const Bitmap& other);
+    Bitmap operator- (int constant);
+    Bitmap operator* (const Bitmap& other);
+    Bitmap operator* (int constant);
+    Bitmap operator/ (const Bitmap& other);
+    Bitmap operator/ (int constant);
 
     /**
      * Bitmap Generators - Methods
      */
     void MakeBitmap(Bitmap_Type gen,
                     Processor_Type hardware = Processor_Type::GPU);
-    void MakeBitmap(Bitmap_Type gen, const Bitmap& other,
+    void MakeBitmap(Bitmap_Modify_Type mod, const Bitmap& other,
                     Processor_Type hardware = Processor_Type::GPU);
-    void MakeBitmap(Bitmap_Type gen, int constant,
+    void MakeBitmap(Bitmap_Modify_Type mod, int constant,
                     Processor_Type hardware = Processor_Type::GPU);
 
     /**
@@ -84,8 +88,10 @@ private:
     void GenerateAdd(Processor_Type hardware, int constant);
     void GenerateSubtract(Processor_Type hardware, const Bitmap& other);
     void GenerateSubtract(Processor_Type hardware, int constant);
-    void GenerateMultiply();
-    void GenerateDivide();
+    void GenerateMultiply(Processor_Type hardware, const Bitmap& other);
+    void GenerateMultiply(Processor_Type hardware, int constant);
+    void GenerateDivide(Processor_Type hardware, const Bitmap& other);
+    void GenerateDivide(Processor_Type hardware, int constant);
     void GenerateMatrixMult(Processor_Type hardware, const Bitmap& other);
 
     // File write

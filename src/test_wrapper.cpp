@@ -28,6 +28,7 @@ struct Command_Args
 {
     bool performance_track      = false;
     Bitmap_Type bmp_gen         = BitmapTypeStatic;
+    Bitmap_Modify_Type bmp_mod  = BitmapModifyTypeAdd;
     Processor_Type bmp_hardware = BitmapProcessorCPU;
     bool long_test_flag         = false;
     int  long_test_iter         = 0;
@@ -138,27 +139,32 @@ void test_InterpretFlag(Command_Args& comm, char* arg)
     { comm.performance_track = true; return; }
     else if (temp == std::string("performance_track=false"))
     { comm.performance_track = false; return; }
-        // Bitmap Generation Type
-    else if (temp == std::string("bmp_gen=BitmapTypeStatic"))
+    // Bitmap Generation Type
+    else if (temp == std::string("bmp_gen=Static"))
     { comm.bmp_gen = BitmapTypeStatic; return; }
-    else if (temp == std::string("bmp_gen=BitmapTypeRandom"))
+    else if (temp == std::string("bmp_gen=Random"))
     { comm.bmp_gen = BitmapTypeRandom; return; }
-    else if (temp == std::string("bmp_gen=BitmapTypeMatrixMult"))
-    { comm.bmp_gen = BitmapTypeMatrixMult; return; }
-    else if (temp == std::string("bmp_gen=BitmapTypeAdd"))
-    { comm.bmp_gen = BitmapTypeAdd; return; }
-    else if (temp == std::string("bmp_gen=BitmapTypeSubtract"))
+    else if (temp == std::string("bmp_gen=Solid"))
+    { comm.bmp_gen = BitmapTypeSolid; return; }
+    else if (temp == std::string("bmp_gen=Image"))
+    { comm.bmp_gen = BitmapTypeImage; return; }
+    // Bitmap Modify Type
+    else if (temp == std::string("bmp_mod=MatrixMult"))
+    { comm.bmp_mod = BitmapModifyTypeMatrixMult; return; }
+    else if (temp == std::string("bmp_mod=Add"))
+    { comm.bmp_mod = BitmapModifyTypeAdd; return; }
+    else if (temp == std::string("bmp_mod=Subtract"))
+    { comm.bmp_mod = BitmapModifyTypeSubtract; return; }
+    else if (temp == std::string("bmp_mod=Multiply"))
         throw std::runtime_error(temp + std::string(" is not implemented"));
-    else if (temp == std::string("bmp_gen=BitmapTypeMultiply"))
-        throw std::runtime_error(temp + std::string(" is not implemented"));
-    else if (temp == std::string("bmp_gen=BitmapTypeDivide"))
+    else if (temp == std::string("bmp_mod=Divide"))
         throw std::runtime_error(temp + std::string(" is not implemented"));
         // Bitmap Processor Type
-    else if (temp == std::string("bmp_hardware=BitmapProcessorGPU"))
+    else if (temp == std::string("bmp_hardware=GPU"))
     { comm.bmp_hardware = BitmapProcessorGPU; return; }
-    else if (temp == std::string("bmp_hardware=BitmapProcessorCPU"))
+    else if (temp == std::string("bmp_hardware=CPU"))
     { comm.bmp_hardware = BitmapProcessorCPU; return; }
-    else if (temp == std::string("bmp_hardware=BitmapProcessorCPUtoGPU"))
+    else if (temp == std::string("bmp_hardware=CPUtoGPU"))
     { comm.bmp_hardware = BitmapProcessorCPUtoGPU; return; }
         // Long Test bool
     else if (temp == std::string("long_test_flag=true"))
@@ -224,11 +230,12 @@ int main(int argc, char** argv)
 
     Command_Args commands = test_InterpretCommands(argc, argv);
 
-    bool have_perf                 = commands.performance_track;
-    Bitmap_Type bitmap_gen_type    = commands.bmp_gen;
-    Processor_Type bitmap_hardware = commands.bmp_hardware;
-    bool run_prolonged             = commands.long_test_flag;
-    int test_iterations            = commands.long_test_iter;
+    bool have_perf                      = commands.performance_track;
+    Bitmap_Type bitmap_gen_type         = commands.bmp_gen;
+    Bitmap_Modify_Type bitmap_mod_type  = commands.bmp_mod;
+    Processor_Type bitmap_hardware      = commands.bmp_hardware;
+    bool run_prolonged                  = commands.long_test_flag;
+    int test_iterations                 = commands.long_test_iter;
 
 
     //<editor-fold desc="Constructor Tests">
@@ -303,48 +310,32 @@ int main(int argc, char** argv)
 
     Bitmap first(1920, 1080, have_perf);
     Bitmap second(1920, 1080, have_perf);
-    first.MakeBitmap(BitmapTypeRandom);
-    second.MakeBitmap(BitmapTypeRandom);
+    first.MakeBitmap(bitmap_gen_type);
+    second.MakeBitmap(bitmap_gen_type);
     Bitmap third = first + second;
     Bitmap fourth = third + 50;
     Bitmap fifth = fourth - 50;
-    std::cout << "Creating Bitmap: " << third.Width() << "x" << third.Height() << std::endl;
-    location = third.DrawBitmap("third");
-    test_LogPerformance(third);
+    Bitmap sixth = first * second;
+    Bitmap seventh = first * 2;
+    Bitmap eighth = first / second;
+    Bitmap ninth = first / 2;
+    /*
+    Bitmap testMaps[9] = {first, second, third, fourth, fifth, sixth, seventh, eighth, ninth};
+    for (int i = 0; i < 9; ++i)
+    {
+        std::cout << "Creating Bitmap: " << testMaps[i].Width() << "x" << testMaps[i].Height() << std::endl;
+        std::string testMapName("Bitmap ");
+        testMapName += std::to_string(i + 1);
+        location = testMaps[i].DrawBitmap(testMapName);
+        //test_LogPerformance(testMaps[i]);
+        std::cout << "Saved at " << location << std::endl << std::endl;
+    }
+     */
+    std::cout << "Creating Bitmap: " << eighth.Width() << "x" << eighth.Height() << std::endl;
+    std::string testMapName("Bitmap ");
+    testMapName += std::to_string(8);
+    location = eighth.DrawBitmap(testMapName);
     std::cout << "Saved at " << location << std::endl << std::endl;
-    std::cout << "Creating Bitmap: " << fourth.Width() << "x" << fourth.Height() << std::endl;
-    location = fourth.DrawBitmap("fourth");
-    test_LogPerformance(fourth);
-    std::cout << "Saved at " << location << std::endl << std::endl;
-    std::cout << "Creating Bitmap: " << fifth.Width() << "x" << fifth.Height() << std::endl;
-    location = fifth.DrawBitmap("fifth");
-    test_LogPerformance(fifth);
-    std::cout << "Saved at " << location << std::endl << std::endl;
-/*
-    Bitmap first(1920, 1080, have_perf);
-    Bitmap second(1920, 1080, have_perf);
-    first.MakeBitmap(bitmap_gen_type, "first");
-    test_LogPerformance(first);
-    second.MakeBitmap(bitmap_gen_type, "second");
-    test_LogPerformance(second);
-    std::cout << "Creating Bitmap: " << first.Width() << "x" << first.Height() << std::endl;
-    location = first.MakeBitmap(BitmapTypeAdd, "matrixAdd", 100, bitmap_hardware);
-    test_LogPerformance(first);
-    std::cout << "Saved at " << location << std::endl << std::endl;
-*/
-/*
-    Bitmap test_write(have_perf);
-    std::cout << "Creating Bitmap: " << test_write.Width() << "x" << test_write.Height() << std::endl;
-    location = test_write.MakeBitmap(bitmap_gen_type, "test_write", bitmap_hardware);
-    test_LogPerformance(test_write);
-    std::cout << "Saved at " << location << std::endl << std::endl;
-
-    Bitmap test_write2(1920, 1080, have_perf);
-    std::cout << "Creating Bitmap: " << test_write2.Width() << "x" << test_write2.Height() << std::endl;
-    location = test_write2.MakeBitmap(bitmap_gen_type, "test_write2", bitmap_hardware);
-    test_LogPerformance(test_write2);
-    std::cout << "Saved at " << location << std::endl << std::endl;
-*/
 
     //<editor-fold desc="Prolonged Tests">
     if (run_prolonged)
@@ -370,18 +361,17 @@ int main(int argc, char** argv)
         std::cout << "========================" << std::endl;
         std::cout << "=RUNNING PROLONGED TEST=" << std::endl;
         std::cout << "========================" << std::endl;
-        if (commands.bmp_gen == BitmapTypeMatrixMult)
+        if (commands.bmp_mod == BitmapModifyTypeMatrixMult)
         {
-            Bitmap_Type secondary_gen = BitmapTypeStatic;
             for (int i = 0; i < test_iterations; i++)
             {
                 std::cout << "Iteration:\t" << i << std::endl;
 
                 Bitmap test_writeLeft(have_perf);
                 Bitmap test_writeRight(have_perf);
-                test_writeLeft.MakeBitmap(secondary_gen, bitmap_hardware);
-                test_writeRight.MakeBitmap(secondary_gen, bitmap_hardware);
-                test_writeLeft.MakeBitmap(bitmap_gen_type, test_writeRight, bitmap_hardware);
+                test_writeLeft.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_writeRight.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_writeLeft.MakeBitmap(bitmap_mod_type, test_writeRight, bitmap_hardware);
                 test_writeLeft.DrawBitmap("writeLeft");
                 test_writeRight.DrawBitmap("writeRight");
                 test_writeLeft.DrawBitmap("writeResult");
@@ -391,9 +381,9 @@ int main(int argc, char** argv)
 
                 Bitmap test_write2Left(1920, 1080, have_perf);
                 Bitmap test_write2Right(1080, 1920, have_perf);
-                test_write2Left.MakeBitmap(secondary_gen, bitmap_hardware);
-                test_write2Right.MakeBitmap(secondary_gen, bitmap_hardware);
-                test_write2Left.MakeBitmap(bitmap_gen_type, test_write2Right, bitmap_hardware);
+                test_write2Left.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_write2Right.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_write2Left.MakeBitmap(bitmap_mod_type, test_write2Right, bitmap_hardware);
                 test_write2Left.DrawBitmap("writeLeftHD");
                 test_write2Right.DrawBitmap("writeRightHD");
                 test_write2Left.DrawBitmap("writeResultHD");
@@ -402,18 +392,17 @@ int main(int argc, char** argv)
                 test_write2Right.~Bitmap();
             }
         }
-        else if (commands.bmp_gen == BitmapTypeAdd)
+        else if (commands.bmp_mod == BitmapModifyTypeAdd)
         {
-            Bitmap_Type secondary_gen = BitmapTypeStatic;
             for (int i = 0; i < test_iterations; i++)
             {
                 std::cout << "Iteration:\t" << i << std::endl;
 
                 Bitmap test_writeLeft(have_perf);
                 Bitmap test_writeRight(have_perf);
-                test_writeLeft.MakeBitmap(secondary_gen, bitmap_hardware);
-                test_writeRight.MakeBitmap(secondary_gen, bitmap_hardware);
-                test_writeLeft.MakeBitmap(bitmap_gen_type, test_writeRight, bitmap_hardware);
+                test_writeLeft.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_writeRight.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_writeLeft.MakeBitmap(bitmap_mod_type, test_writeRight, bitmap_hardware);
                 test_writeLeft.DrawBitmap("writeLeft");
                 test_writeRight.DrawBitmap("writeRight");
                 test_writeLeft.DrawBitmap("writeResult");
@@ -421,9 +410,9 @@ int main(int argc, char** argv)
 
                 Bitmap test_write2Left(1920, 1080, have_perf);
                 Bitmap test_write2Right(1920, 1080, have_perf);
-                test_write2Left.MakeBitmap(secondary_gen, bitmap_hardware);
-                test_write2Right.MakeBitmap(secondary_gen, bitmap_hardware);
-                test_write2Left.MakeBitmap(bitmap_gen_type, test_write2Right, bitmap_hardware);
+                test_write2Left.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_write2Right.MakeBitmap(bitmap_gen_type, bitmap_hardware);
+                test_write2Left.MakeBitmap(bitmap_mod_type, test_write2Right, bitmap_hardware);
                 test_writeLeft.DrawBitmap("writeLeftHD");
                 test_writeRight.DrawBitmap("writeRightHD");
                 test_writeLeft.DrawBitmap("writeResultHD");

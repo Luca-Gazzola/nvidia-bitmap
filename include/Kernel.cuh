@@ -60,6 +60,28 @@ __host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
 __host__ uchar4* LaunchSubtract(uchar4* colorMap, int width, int height,
                                 int constant, double performance[]);
 
+// Point-wise Multiply
+__host__ uchar4* LaunchMultiply(uchar4* colorMap, int width, int height,
+                                uchar4* otherMap, int otherWidth, int otherHeight);
+__host__ uchar4* LaunchMultiply(uchar4* colorMap, int width, int height,
+                                uchar4* otherMap, int otherWidth, int otherHeight,
+                                double performance[]);
+__host__ uchar4* LaunchMultiply(uchar4* colorMap, int width, int height,
+                                int constant);
+__host__ uchar4* LaunchMultiply(uchar4* colorMap, int width, int height,
+                                int constant, double performance[]);
+
+// Point-wise Division
+__host__ uchar4* LaunchDivision(uchar4* colorMap, int width, int height,
+                                uchar4* otherMap, int otherWidth, int otherHeight);
+__host__ uchar4* LaunchDivision(uchar4* colorMap, int width, int height,
+                                uchar4* otherMap, int otherWidth, int otherHeight,
+                                double performance[]);
+__host__ uchar4* LaunchDivision(uchar4* colorMap, int width, int height,
+                                int constant);
+__host__ uchar4* LaunchDivision(uchar4* colorMap, int width, int height,
+                                int constant, double performance[]);
+
 // Matrix Multiply
 __host__ uchar4* LaunchMatrixMult(uchar4* colorMap, int width, int height,
                                   uchar4* otherMap, int otherWidth, int otherHeight);
@@ -90,7 +112,7 @@ __global__ static void __RandomGeneration(int width, int height,
 // Addition Kernel
 __global__ static void __Addition(uchar4* map, int pitch,
                                   uchar4* colorMap, int colorPitch, int width, int height,
-                                  uchar4* otherMap, int otherPitch, int otherWidth, int otherHeight);
+                                  uchar4* otherMap, int otherPitch);
 __global__ static void __Addition(uchar4* map, int pitch,
                                   uchar4* colorMap, int colorPitch, int width, int height,
                                   int constant);
@@ -98,8 +120,24 @@ __global__ static void __Addition(uchar4* map, int pitch,
 // Subtract Kernel
 __global__ static void __Subtract(uchar4* map, int pitch,
                                   uchar4* colorMap, int colorPitch, int width, int height,
-                                  uchar4* otherMap, int otherPitch, int otherWidth, int otherHeight);
+                                  uchar4* otherMap, int otherPitch);
 __global__ static void __Subtract(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  int constant);
+
+// Multiply Kernel
+__global__ static void __Multiply(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  uchar4* otherMap, int otherPitch);
+__global__ static void __Multiply(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  int constant);
+
+// Division Kernel
+__global__ static void __Division(uchar4* map, int pitch,
+                                  uchar4* colorMap, int colorPitch, int width, int height,
+                                  uchar4* otherMap, int otherPitch);
+__global__ static void __Division(uchar4* map, int pitch,
                                   uchar4* colorMap, int colorPitch, int width, int height,
                                   int constant);
 

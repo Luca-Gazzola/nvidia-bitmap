@@ -136,28 +136,56 @@ void Bitmap::operator= (const Bitmap& other)
 Bitmap Bitmap::operator+ (const Bitmap& other)
 {
     Bitmap clone = Clone();
-    clone.MakeBitmap(Bitmap_Type::Add, other, m_defaultHardware);
+    clone.MakeBitmap(Bitmap_Modify_Type::Add, other, m_defaultHardware);
     return clone;
 }
 
 Bitmap Bitmap::operator+ (int constant)
 {
     Bitmap clone = Clone();
-    clone.MakeBitmap(Bitmap_Type::Add, constant, m_defaultHardware);
+    clone.MakeBitmap(Bitmap_Modify_Type::Add, constant, m_defaultHardware);
     return clone;
 }
 
 Bitmap Bitmap::operator- (const Bitmap& other)
 {
     Bitmap clone = Clone();
-    clone.MakeBitmap(Bitmap_Type::Subtract, other, m_defaultHardware);
+    clone.MakeBitmap(Bitmap_Modify_Type::Subtract, other, m_defaultHardware);
     return clone;
 }
 
 Bitmap Bitmap::operator- (int constant)
 {
     Bitmap clone = Clone();
-    clone.MakeBitmap(Bitmap_Type::Subtract, constant, m_defaultHardware);
+    clone.MakeBitmap(Bitmap_Modify_Type::Subtract, constant, m_defaultHardware);
+    return clone;
+}
+
+Bitmap Bitmap::operator* (const Bitmap& other)
+{
+    Bitmap clone = Clone();
+    clone.MakeBitmap(Bitmap_Modify_Type::Multiply, other, m_defaultHardware);
+    return clone;
+}
+
+Bitmap Bitmap::operator* (int constant)
+{
+    Bitmap clone = Clone();
+    clone.MakeBitmap(Bitmap_Modify_Type::Multiply, constant, m_defaultHardware);
+    return clone;
+}
+
+Bitmap Bitmap::operator/ (const Bitmap& other)
+{
+    Bitmap clone = Clone();
+    clone.MakeBitmap(Bitmap_Modify_Type::Divide, other, m_defaultHardware);
+    return clone;
+}
+
+Bitmap Bitmap::operator/ (int constant)
+{
+    Bitmap clone = Clone();
+    clone.MakeBitmap(Bitmap_Modify_Type::Divide, constant, m_defaultHardware);
     return clone;
 }
 
@@ -185,36 +213,36 @@ void Bitmap::MakeBitmap(Bitmap_Type gen, Processor_Type hardware)
 // Takes another bitmap and modifies it with
 // this bitmap in various ways
 // Returns the filepath of the generated Bitmap
-void Bitmap::MakeBitmap(Bitmap_Type gen, const Bitmap& other,
+void Bitmap::MakeBitmap(Bitmap_Modify_Type mod, const Bitmap& other,
                         Processor_Type hardware)
 {
     // Reset performance
     SetPerformanceInformation();
 
-    switch (gen)
+    switch (mod)
     {
-        case Bitmap_Type::Add       : GenerateAdd(hardware, other);         return;
-        case Bitmap_Type::Subtract  : GenerateSubtract(hardware, other);    return;
-        case Bitmap_Type::Multiply  : GenerateMultiply();                   return;
-        case Bitmap_Type::Divide    : GenerateDivide();                     return;
-        case Bitmap_Type::MatrixMult: GenerateMatrixMult(hardware, other);  return;
-        default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Type");
+        case Bitmap_Modify_Type::Add       : GenerateAdd(hardware, other);         return;
+        case Bitmap_Modify_Type::Subtract  : GenerateSubtract(hardware, other);    return;
+        case Bitmap_Modify_Type::Multiply  : GenerateMultiply(hardware, other);    return;
+        case Bitmap_Modify_Type::Divide    : GenerateDivide(hardware, other);      return;
+        case Bitmap_Modify_Type::MatrixMult: GenerateMatrixMult(hardware, other);  return;
+        default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Modify_Type");
     }
 }
 
-void Bitmap::MakeBitmap(Bitmap_Type gen, int constant,
+void Bitmap::MakeBitmap(Bitmap_Modify_Type mod, int constant,
                         Processor_Type hardware)
 {
     // Reset performance
     SetPerformanceInformation();
 
-    switch (gen)
+    switch (mod)
     {
-        case Bitmap_Type::Add       : GenerateAdd(hardware, constant);      return;
-        case Bitmap_Type::Subtract  : GenerateSubtract(hardware, constant); return;
-        case Bitmap_Type::Multiply  : GenerateMultiply();                   return;
-        case Bitmap_Type::Divide    : GenerateDivide();                     return;
-        default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Type");
+        case Bitmap_Modify_Type::Add       : GenerateAdd(hardware, constant);      return;
+        case Bitmap_Modify_Type::Subtract  : GenerateSubtract(hardware, constant); return;
+        case Bitmap_Modify_Type::Multiply  : GenerateMultiply(hardware, constant); return;
+        case Bitmap_Modify_Type::Divide    : GenerateDivide(hardware, constant);   return;
+        default: throw BitmapException("[MAKE_BITMAP] Invalid Bitmap_Modify_Type");
     }
 }
 
@@ -426,14 +454,82 @@ void Bitmap::GenerateSubtract(Processor_Type hardware, int constant)
     m_color = resultant;
 }
 
-void Bitmap::GenerateMultiply()
+void Bitmap::GenerateMultiply(Processor_Type hardware, const Bitmap& other)
 {
+    if (!m_color || !other.m_color)
+        throw BitmapException("[MULTIPLY] This object's bitmap or the other's bitmap is missing (nullptr)");
 
+    RGBQUAD** resultant = nullptr;
+
+    if (!m_track_performance)
+        resultant = Kernel::Multiply(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biHeight);
+    else
+        resultant = Kernel::Multiply(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biHeight,
+                                     m_performance.performanceArray);
+
+    DeleteColorMap();
+    SetBitmapInformation(m_bmpInfo.biWidth, m_bmpInfo.biHeight);
+    m_color = resultant;
 }
 
-void Bitmap::GenerateDivide()
+void Bitmap::GenerateMultiply(Processor_Type hardware, int constant)
 {
+    if (!m_color)
+        throw BitmapException("[MULTIPLY] This object's bitmap is missing (nullptr)");
 
+    RGBQUAD** resultant = nullptr;
+
+    if (!m_track_performance)
+        resultant = Kernel::Multiply(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     constant);
+    else
+        resultant = Kernel::Multiply(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     constant, m_performance.performanceArray);
+
+    DeleteColorMap();
+    SetBitmapInformation(m_bmpInfo.biWidth, m_bmpInfo.biHeight);
+    m_color = resultant;
+}
+
+void Bitmap::GenerateDivide(Processor_Type hardware, const Bitmap& other)
+{
+    if (!m_color || !other.m_color)
+        throw BitmapException("[DIVISION] This object's bitmap or the other's bitmap is missing (nullptr)");
+
+    RGBQUAD** resultant = nullptr;
+
+    if (!m_track_performance)
+        resultant = Kernel::Division(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biHeight);
+    else
+        resultant = Kernel::Division(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biHeight,
+                                     m_performance.performanceArray);
+
+    DeleteColorMap();
+    SetBitmapInformation(m_bmpInfo.biWidth, m_bmpInfo.biHeight);
+    m_color = resultant;
+}
+
+void Bitmap::GenerateDivide(Processor_Type hardware, int constant)
+{
+    if (!m_color)
+        throw BitmapException("[DIVISION] This object's bitmap is missing (nullptr)");
+
+    RGBQUAD** resultant = nullptr;
+
+    if (!m_track_performance)
+        resultant = Kernel::Division(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     constant);
+    else
+        resultant = Kernel::Division(hardware, m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight,
+                                     constant, m_performance.performanceArray);
+
+    DeleteColorMap();
+    SetBitmapInformation(m_bmpInfo.biWidth, m_bmpInfo.biHeight);
+    m_color = resultant;
 }
 
 void Bitmap::GenerateMatrixMult(Processor_Type hardware, const Bitmap& other)
@@ -610,6 +706,7 @@ RGBQUAD** Bitmap::CopyColorMap(RGBQUAD** map, int width, int height)
 Bitmap Bitmap::Clone()
 {
     Bitmap clone(m_bmpInfo.biWidth, m_bmpInfo.biHeight, m_track_performance);
+    clone.DeleteColorMap();
     clone.m_color = CopyColorMap(m_color, m_bmpInfo.biWidth, m_bmpInfo.biHeight);
     return clone;
 }
