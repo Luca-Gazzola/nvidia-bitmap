@@ -100,7 +100,7 @@ Bitmap::Bitmap(const Bitmap& other)
 
     // No CUDA setup necessary since it is copy
     // constructing from another constructed Bitmap
-    m_color = CopyColorMap(other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biWidth);
+    m_color = CopyColorMap(other.m_color, other.m_bmpInfo.biWidth, other.m_bmpInfo.biHeight);
 }
 
 

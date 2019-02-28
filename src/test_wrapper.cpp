@@ -312,6 +312,7 @@ int main(int argc, char** argv)
     Bitmap second(1920, 1080, have_perf);
     first.MakeBitmap(bitmap_gen_type);
     second.MakeBitmap(bitmap_gen_type);
+    Bitmap copy = first;
     Bitmap third = first + second;
     Bitmap fourth = third + 50;
     Bitmap fifth = fourth - 50;
@@ -319,7 +320,7 @@ int main(int argc, char** argv)
     Bitmap seventh = first * 2;
     Bitmap eighth = first / second;
     Bitmap ninth = first / 2;
-    /*
+
     Bitmap testMaps[9] = {first, second, third, fourth, fifth, sixth, seventh, eighth, ninth};
     for (int i = 0; i < 9; ++i)
     {
@@ -330,12 +331,7 @@ int main(int argc, char** argv)
         //test_LogPerformance(testMaps[i]);
         std::cout << "Saved at " << location << std::endl << std::endl;
     }
-     */
-    std::cout << "Creating Bitmap: " << eighth.Width() << "x" << eighth.Height() << std::endl;
-    std::string testMapName("Bitmap ");
-    testMapName += std::to_string(8);
-    location = eighth.DrawBitmap(testMapName);
-    std::cout << "Saved at " << location << std::endl << std::endl;
+
 
     //<editor-fold desc="Prolonged Tests">
     if (run_prolonged)
