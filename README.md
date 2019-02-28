@@ -14,7 +14,9 @@ implementations under the hood. I designed the Bitmap with what I was learning o
 wanting to learn, not for the actual practical use of it.
 
 ## Changes
-Latest Version: 1.08
+Latest Version: 1.09
 
 Please view the changelog for updates. Yeah I should combine them but I don't wanna.
+
+1.09 is likely to be the last major iteration of this project unless I feel like coming back to it.
 

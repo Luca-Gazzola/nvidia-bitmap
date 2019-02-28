@@ -1,5 +1,18 @@
 Changelog
 =========
+28.02.2019 - 1.09
+Finally fixed the copy constructor issue. Now that all the operators I've wanted
+to implement are finally done, on top of the copy constructor finally working, I
+feel comfortable leaving the project where it is. I may add more stuff later if
+I feel like it, but this was the last thing I wanted to do to make the project
+more complete. I'm sure there are bugs still in the code that I haven't found
+yet but if they pop up when I'm using it then I'll be sure to update and patch
+things. This project has basically been a 3 month endeavor on renewing my C++
+knowledge on top of learning how GPU's work both on the hardware and software
+side. While that knowledge isn't completely rounded and I haven't tested all
+aspects like streams or shared memory, I have at least an understanding of those
+concepts. 
+
 15.02.2019 - 1.08
 Happy Birthday to me. And I'm here again, working at the lab. I really don't have
 anything to do I guess. I've added point-wise multiplication and division in
